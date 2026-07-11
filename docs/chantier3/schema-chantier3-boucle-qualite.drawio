@@ -1,0 +1,56 @@
+<mxfile host="app.diagrams.net" modified="2026-07-11T00:00:00.000Z" agent="Claude" version="24.0.0">
+  <diagram id="boucle-qualite-c3" name="Boucle qualité Chantier 3">
+    <mxGraphModel dx="1000" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="VELMO 2.0 — CHANTIER 3 : LA BOUCLE QUALITÉ (évaluation → CI → versionnage → suivi)" style="text;html=1;fontSize=16;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="100" y="10" width="800" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ds1" value="memory_cases.jsonl" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ds2" value="guardrail_cases.jsonl" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="400" y="60" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ds3" value="quality_cases.jsonl" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="740" y="60" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="s1" value="SUITE MÉMOIRE&#10;rejoue R1–R6&#10;→ note /100" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="60" y="160" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" value="SUITE GARDE-FOUS&#10;taux de blocage&#10;+ taux de faux positifs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="400" y="160" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" value="SUITE QUALITÉ&#10;qualité des réponses&#10;→ note /100" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="740" y="160" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="global" value="NOTE GLOBALE&#10;moyenne pondérée des 3&#10;(garde-fous graves = éliminatoires)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="400" y="300" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ci" value="CI quality.yml&#10;note ≥ seuil ?&#10;(anti-bruit : moyenne 3 runs)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="380" y="430" width="240" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="blocked" value="❌ LIVRAISON BLOQUÉE&#10;(régression détectée)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="740" y="455" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ver" value="VERSIONNAGE + note journalisée&#10;version = prompt + config mémoire&#10;+ config garde-fous" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="400" y="590" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="report" value="mlops/report.md — SIGNAUX DE SUIVI&#10;note mémoire · taux de blocage · faux positifs&#10;latence · coût par conversation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="370" y="720" width="260" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="ds1" target="s1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="ds2" target="s2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="ds3" target="s3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="s1" target="global"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="s2" target="global"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="s3" target="global"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="global" target="ci"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e8" value="note &lt; seuil" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#b85450;fontColor=#b85450;fontStyle=1" edge="1" parent="1" source="ci" target="blocked"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e9" value="note ≥ seuil ✅" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#82b366;fontColor=#82b366;fontStyle=1" edge="1" parent="1" source="ci" target="ver"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="ver" target="report"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
