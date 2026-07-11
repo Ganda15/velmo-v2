@@ -217,6 +217,25 @@ Prêt pour `/speckit-implement` ou implémentation manuelle par Era, tâche par 
 `specs/001-quality-eval-loop/tasks.md`, phases 1 à 5 (T001–T013). Era code elle-même,
 Claude donne code + explication dans le chat, application seulement sur « do it ».
 
+**Avancement (2026-07-12) :**
+- ✅ **T001** — baseline rouge observée : `3 failed in 0.28s`, tous sur
+  `NotImplementedError: run_eval` (`src/velmo/mlops/__init__.py:40`). Bonus : `uv run` a créé
+  le venv (Python 3.11.15, 28 paquets) sans blocage AppLocker.
+- ✅ **T002** — déjà fait par le brief : `.gitignore` couvrait `mlops/report.md` +
+  `mlops/*.json`, et `mlops/.gitkeep` existait. Rien à faire (vérifié avant d'agir).
+- ✅ **T003** — `src/velmo/mlops/versioning.py` : empreinte SHA-256 de la config
+  (prompt + token_budget + garde-fous). Vérifié : `v-15c0a01673a5` identique sur 2 runs.
+  🔴→🟢 **Incident C21 documenté — 2 bugs dans la 1re version :**
+  1. `AttributeError` : `CATEGORIES` est au **niveau module** de `velmo.guardrails`
+     (ligne 17), pas un attribut de classe `GuardrailEngine.CATEGORIES`. Cause racine :
+     code écrit depuis la doc du plan au lieu du vrai fichier. Leçon : lire le code réel.
+  2. Bug **silencieux** : `sorted(INPUT_KEYWORDS)` sur un dict ne trie que les CLÉS et
+     jette les listes de mots-clés → modifier un mot-clé n'aurait pas changé l'empreinte
+     (versionnage menteur, sans crash). Corrigé par
+     `{category: sorted(keywords) for ... in sorted(...items())}`.
+  Méthode : reproduire → lire le vrai fichier (`grep` lignes 17/52) → corriger → re-vérifier.
+- ⏭️ Prochaine : **T004** `cases.py` (chargeur JSONL fail-closed).
+
 ### Étape 6 — CI quality.yml + versionnage
 `tasks.md` phase 6 (T014–T015) : `score.py` (CLI) + décommenter le gate dans `quality.yml`.
 
