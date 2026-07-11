@@ -161,6 +161,10 @@ liste des catégories « graves », comment la suite garde-fous observe le bloca
 (Principe I) écrit `MEMORY_DB_URL`, le vrai code utilise `DB_URL`. Le plan suit le vrai code.
 Amendement PATCH de la constitution à faire séparément.
 
+**🔄 Résolu (2026-07-12)** : constitution amendée en v1.0.1 (`MEMORY_DB_URL` → `DB_URL`,
+Principes I et VI), même correction dans `CLAUDE.md`. Commits `d4e4090` (plan + constitution
+1.0.1) et `c1053af` (déplacement des fichiers schéma vers `docs/chantier3/`).
+
 Structure retenue : `src/velmo/mlops/{cases,scoring,versioning,report,eval_agent,score}.py`
 + `suites/{memory,guardrail,quality}_suite.py`, plus un dossier `mlops/` généré à la racine
 (rapport, pas du code source). Un seul fichier CI à toucher : décommenter le step déjà présent
@@ -174,22 +178,52 @@ que l'agent de référence (`build_reference_agent`, garde-fous réels) obtient 
 ≥ 0.8 sur les 55 cas d'éval existants. Si ce n'est pas le cas au premier run réel, il faudra
 ajuster la couverture des garde-fous (pas le test, pas le seuil) — TDD rouge→vert normal.
 
+### Étape 4c — `/speckit-tasks` : découpage en tâches
+**FAIT (2026-07-12).** `specs/001-quality-eval-loop/tasks.md` généré — 18 tâches sur
+7 phases.
+
+Organisation stricte TDD demandée par Era : chaque tâche d'implémentation démarre par
+`pytest tests/acceptance/test_mlops.py -v` (rouge observé ou confirmé) et se termine par
+le même run (vert obtenu, ou rouge encore attendu mais pour une raison différente — ex.
+T009 fait passer `test_scores_produced_and_versioned` au vert pendant que les 2 autres
+restent rouges, mais sur `enforce_threshold`/`write_report`, plus sur `run_eval`).
+
+Découpage par phase :
+- **Phase 1 Setup** (T001–T002) — rouge de départ constaté, `.gitignore` pour `mlops/report.md`.
+- **Phase 2 Foundational** (T003) — `versioning.py`, partagé par les 3 user stories.
+- **Phase 3 US1** (T004–T009) — `cases.py`, les 3 suites (parallélisables), `scoring.py`,
+  câblage `run_eval`/`current_version`. Checkpoint : 1er test vert, MVP.
+- **Phase 4 US2** (T010–T011) — `enforce_threshold`, `eval_agent.py`. Checkpoint : 2e test vert.
+- **Phase 5 US3** (T012–T013) — `report.py`, câblage `write_report`. Checkpoint : les 3 tests
+  d'acceptance passent.
+- **Phase 6 CI Gate Activation** (T014–T015) — `score.py` (CLI) + décommenter `quality.yml`.
+  Placée APRÈS US3 volontairement : le CLI doit écrire le rapport même en cas de blocage
+  (contracts/cli.md), donc dépend de `write_report` (US3) autant que d'`enforce_threshold` (US2)
+  — dépendance croisée assumée et documentée plutôt que forcer une fausse indépendance.
+- **Phase 7 Polish** (T016–T018) — suite complète, ruff/mypy, MAJ JOURNAL (rappel du risque
+  seuil 0.8 flagué à l'Étape 4b, à vérifier au premier run réel).
+
+Toutes les tâches respectent le format strict (`- [ ] TXXX [P?] [Story?] Description + chemin`),
+taillées ~15-30 min chacune. `T005`/`T006`/`T007` (les 3 suites) et `T010`/`T011`
+(seuil/agent CLI) sont parallélisables (fichiers indépendants).
+
+Prêt pour `/speckit-implement` ou implémentation manuelle par Era, tâche par tâche.
+
 ---
 
 ## ⏭️ À FAIRE
 
-### Étape 4c — `/speckit-tasks` ← ON EST ICI
-Découper `plan.md` en tâches exécutables sur `specs/001-quality-eval-loop/`.
-Era lit et corrige chaque fichier. Preuves C14–C16.
-
-### Étape 5 — Les 3 suites d'évaluation (TDD, Era code)
-`mlops/` : suite mémoire, suite garde-fous (blocage + faux positifs), suite qualité + note globale.
+### Étape 5 — Les 3 suites d'évaluation (TDD, Era code) ← ON EST ICI
+`specs/001-quality-eval-loop/tasks.md`, phases 1 à 5 (T001–T013). Era code elle-même,
+Claude donne code + explication dans le chat, application seulement sur « do it ».
 
 ### Étape 6 — CI quality.yml + versionnage
-GitHub Actions : exécute les suites → seuil → bloque si la note chute. Versionne + journalise la note.
+`tasks.md` phase 6 (T014–T015) : `score.py` (CLI) + décommenter le gate dans `quality.yml`.
 
 ### Étape 7 — mlops/report.md
-Rapport : note mémoire, taux de blocage, faux positifs, latence, coût.
+Déjà couvert par `tasks.md` phase 5 (T012–T013) — rapport : note mémoire, taux de blocage,
+faux positifs, latence, coût.
 
 ### Étape 8 — Preuves + re-audit
-Tests d'acceptance (preuve) · `/mlops velmo` · oraux FR/EN · MAJ de ce journal.
+`tasks.md` phase 7 (T016–T018) : suite complète + lint/types + MAJ journal. Puis tests
+d'acceptance (preuve) · `/mlops velmo` · oraux FR/EN.
