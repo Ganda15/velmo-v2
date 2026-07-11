@@ -1,25 +1,28 @@
 <!--
 Sync Impact Report
-- Version change: [TEMPLATE] → 1.0.0 (initial ratification)
-- Modified principles: n/a (all six principles newly defined from placeholders)
-- Added sections:
-  - Core Principles I–VI (Imposed Technology Stack; Test-First — Acceptance Tests Are
-    the Contract; GDPR by Design — Isolation & Right to Be Forgotten; Quality Gate
-    Blocks Delivery; RNCP Traceability; Secrets & OWASP API Security)
-  - Development Workflow (Section 2)
-  - Quality & Evaluation Chain (Section 3)
-  - Governance (amendment procedure, versioning policy, compliance review)
-- Removed sections: none (template placeholders replaced, no prior content existed)
+- Version change: 1.0.0 → 1.0.1 (PATCH — wording fix, no principle redefined)
+- Modified principles:
+  - I. Imposed Technology Stack — corrected the production DB env var name from
+    `MEMORY_DB_URL` to `DB_URL` (the actual variable read by `src/velmo/db.py` and
+    documented in `.env.example`; `MEMORY_DB_URL` never existed in the codebase).
+    No behavioral or scope change to the principle itself — SQLite dev / Postgres
+    prod via an env var is unchanged, only the variable's name was wrong.
+  - VI. Secrets & OWASP API Security — same `MEMORY_DB_URL` → `DB_URL` correction in
+    the secrets example list.
+- Added sections: none
+- Removed sections: none
 - Templates requiring updates:
-  - .specify/templates/plan-template.md ✅ no change needed (Constitution Check gate
-    already reads dynamically from this file)
-  - .specify/templates/spec-template.md ✅ no change needed (no constitution-specific
-    placeholders)
-  - .specify/templates/tasks-template.md ✅ no change needed (no constitution-specific
-    placeholders)
-  - README.md ✅ consistent (stack description already matches Principle I)
-  - CLAUDE.md ✅ consistent (stack/TDD/RNCP rules already match Principles I, II, V)
-- Follow-up TODOs: none — no placeholder left undefined
+  - .specify/templates/plan-template.md ✅ no change needed
+  - .specify/templates/spec-template.md ✅ no change needed
+  - .specify/templates/tasks-template.md ✅ no change needed
+  - README.md ✅ already uses `DB_URL` correctly, no change needed
+  - CLAUDE.md ⚠️ contained the same `MEMORY_DB_URL` error — corrected in this
+    amendment (see repo root CLAUDE.md, "Stack imposée" section)
+- Follow-up TODOs: none
+- Trigger: discrepancy flagged by specs/001-quality-eval-loop/research.md
+  ("Constitution discrepancy flagged" section) while planning the quality
+  evaluation loop feature — the plan needed to know which env var `build_eval_agent()`
+  actually reads.
 -->
 
 # Velmo 2.2 Constitution
@@ -34,7 +37,7 @@ swapped, or "improved" without explicit written sign-off from the trainer:
 - **LLM**: Kimi, accessed via Azure AI. No other model provider or local model may
   replace it in any code path that reaches production or acceptance tests.
 - **Long-term memory**: SQLite in development; PostgreSQL in production, selected
-  exclusively via the `MEMORY_DB_URL` environment variable. No other database engine.
+  exclusively via the `DB_URL` environment variable. No other database engine.
 - **Vector store**: Chroma. No other vector database or in-house vector index.
 
 Rationale: this is an RNCP-assessed exercise built on a formateur-defined brief; the
@@ -95,7 +98,7 @@ such rather than silently absorbed into the codebase.
 
 ### VI. Secrets & OWASP API Security (NON-NEGOTIABLE)
 
-API keys, connection strings, and other secrets (Azure AI key, `MEMORY_DB_URL`
+API keys, connection strings, and other secrets (Azure AI key, `DB_URL`
 credentials, etc.) MUST live only in `.env` (or an equivalent untracked local
 secret store) and MUST NEVER be committed to git, hardcoded, or logged. Every
 HTTP-exposed endpoint MUST be evaluated against the OWASP API Security Top 10
@@ -162,4 +165,4 @@ Complexity Tracking table or the plan MUST be revised. `CLAUDE.md` remains the
 day-to-day operational guidance file (commands, repo-specific conventions); this
 constitution is the higher-authority source when the two disagree.
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-11 | **Last Amended**: 2026-07-11
+**Version**: 1.0.1 | **Ratified**: 2026-07-11 | **Last Amended**: 2026-07-12

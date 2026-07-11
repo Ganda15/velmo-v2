@@ -2,7 +2,7 @@
 
 ## Stack imposée (brief formateur — ne pas changer)
 - LLM : Kimi via Azure AI (clé dans .env, jamais commitée)
-- Mémoire long terme : SQLite en dev, Postgres via MEMORY_DB_URL en prod
+- Mémoire long terme : SQLite en dev, Postgres via DB_URL en prod
 - Vectoriel : Chroma
 
 ## Commandes
