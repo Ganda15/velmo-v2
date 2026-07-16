@@ -13,7 +13,25 @@ import re
 from . import tools
 from .guardrails import GuardrailEngine
 from .llm import LLM, get_llm
-from .memory import MemoryManager
+from .memory import MemoryContext, MemoryManager
+
+# Observabilité (Chantier 3 — C20). Import DÉFENSIF : si `langsmith` n'est pas
+# installé, `traceable` devient un décorateur neutre qui renvoie la fonction
+# telle quelle. Les tests hors-ligne ne dépendent donc jamais de LangSmith.
+try:
+    from langsmith import traceable
+except ImportError:  # pragma: no cover - chemin de repli sans la lib
+
+    def traceable(*args, **kwargs):
+        # @traceable (sans parenthèses) : args = (fonction,) → on la renvoie.
+        if len(args) == 1 and callable(args[0]) and not kwargs:
+            return args[0]
+
+        # @traceable(...) : on renvoie un décorateur qui ne modifie rien.
+        def _decorator(func):
+            return func
+
+        return _decorator
 
 SYSTEM_PROMPT = (
     "Tu es l'assistant de support de Velmo, boutique de maillots de foot collector. "
@@ -67,6 +85,7 @@ class Agent:
         self.session = session
         self.kb = kb
 
+    @traceable(run_type="chain", name="agent_turn")
     def respond(self, user_id: str, message: str) -> str:
         gate_in = self.guardrails.check_input(message)
         if not gate_in.allowed:
@@ -74,8 +93,8 @@ class Agent:
             self.memory.write(user_id, message, refusal)
             return refusal
 
-        self.memory.read(user_id, message)
-        answer = self._handle(user_id, message)
+        context = self.memory.read(user_id, message)
+        answer = self._handle(user_id, message, context)
 
         gate_out = self.guardrails.check_output(answer)
         if not gate_out.allowed:
@@ -86,11 +105,25 @@ class Agent:
 
     # --- routage déterministe ------------------------------------------------
 
-    def _handle(self, user_id: str, message: str) -> str:
+    def _handle(self, user_id: str, message: str, context: MemoryContext) -> str:
         low = message.lower()
         order = ORDER_RE.search(message)
         order_id = order.group(0) if order else None
         confirmed = any(c in low for c in _CONFIRM)
+
+        # Intention « droit à l'oubli » : on route vers la mémoire (R5).
+        if order_id is None and any(w in low for w in ("oublie", "oublier", "efface", "supprime")):
+            words = (
+                low.replace("oublier", " ").replace("oublie", " ")
+                .replace("efface", " ").replace("supprime", " ").split()
+            )
+            stop = {"ma", "mon", "mes", "la", "le", "les", "de", "du", "stp", "svp",
+                    "s'il", "te", "plait", "plaît", "information", "informations"}
+            target = " ".join(w for w in words if w not in stop).strip(" .!?")
+            removed = self.memory.forget(user_id, target)
+            if removed:
+                return f"C'est noté, j'ai oublié ce qui concerne « {target} » ({removed} information supprimée)."
+            return f"Je n'ai rien concernant « {target} » en mémoire."
 
         if order_id and "annul" in low:
             return self._confirm_or_act(
@@ -135,7 +168,7 @@ class Agent:
         if any(k in low for k in _FAQ_KEYWORDS):
             return self._format_kb(tools.search_kb(self.kb, message))
 
-        return self.llm.invoke(SYSTEM_PROMPT, "", message)
+        return self.llm.invoke(SYSTEM_PROMPT, context.render(), message)
 
     def _confirm_or_act(self, confirmed: bool, label: str, order_id: str, action) -> str:
         if not confirmed:
