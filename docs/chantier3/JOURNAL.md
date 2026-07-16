@@ -478,6 +478,57 @@ l'instruction, contre-vérifié sur disque par la session principale.
 
 **Prochaine : T005 · T006 · T007** — les 3 suites, indépendantes, parallélisables.
 
+### 🔴 BLOCAGE STRUCTUREL DÉCOUVERT AVANT T005 (2026-07-16) — décision formateur requise
+Sondage fait AVANT de coder (bloc AVANT) : simulation des 3 suites sur l'agent de référence.
+Résultat : **le contrat de T005 tel qu'écrit ne peut pas marcher.** Deux problèmes distincts.
+
+**Problème 1 — le contrat de T005 est INCOMPLET et planterait.**
+`tasks.md` dit « check `evaluation.expected_substring` », mais les 12 cas mémoire ont **3
+formes**, pas une : `recall` (6) et `persistence` (4) → `expected_substring` ; **`forget` (2)
+→ `forbidden_substring` + `target`, et la vérification est INVERSÉE** (la valeur doit être
+ABSENTE). Appliqué à la lettre → `KeyError: 'expected_substring'`. Reproduit.
+
+**Problème 2 — la suite mémoire vaudrait 0, et le test de régression échouerait.**
+- `conftest.build_reference_agent()` code **`EchoLLM()` en dur** (ligne 47). `test_mlops.py:29`
+  fait `run_eval(build_reference_agent())` → l'éval tourne donc sur EchoLLM, point.
+- Trace mesurée sur `R1-marc-3commandes` : la mémoire **est bien écrite ET relue**
+  (`{'commande o-2024-0101': 'en preparation'}`) — la chaîne du Chantier 1 marche. Mais la
+  question d'éval ne matche aucun outil → elle tombe sur le LLM → EchoLLM répète la question :
+  `[velmo] J'ai bien reçu : Quelle etait ma toute premiere commande citee ?`. Aucun
+  `expected_substring`. **Seul un LLM sait transformer un contexte mémoire en réponse.**
+- Conséquence chiffrée : `memoire = 0` → `globale = 0,35×0 + 0,35×1 + 0,30×1 = 0,65 < 0,8`
+  → `enforce_threshold(good, 0.8)` LÈVERAIT → **`test_regression_blocks_delivery` échoue**.
+- **C'est exactement le risque noté à l'Étape 4b.** Il s'est matérialisé.
+- Rien à changer ailleurs : le test, `conftest`, le seuil (0,8 littéral) et la pondération
+  (validée formateur) sont tous verrouillés.
+
+**✅ Option A — testée, elle marche** : la suite mémoire évalue **l'ÉTAT de la mémoire**
+(`memory.read(user_id, q).facts`) au lieu de la **phrase du LLM**. Le rejeu passe toujours par
+`respond()` (l'état construit reste réel), seule la vérification finale change.
+- Mesuré : **mémoire 6/12 = 0,50** → `globale = 0,825` → **PASSE** le seuil. Dégradé → 0,0
+  (garde-fous à 0 + `serious_leak`) → bloqué. **Les 3 tests passeraient.**
+- **Justification de fond** : symétrie avec T006. T006 isole le **garde-fou** de la chaîne,
+  T005 doit isoler la **mémoire** du LLM — même raison : *un rouge doit nommer UN coupable*.
+  Si la note mémoire dépend du talent du LLM à formuler, un rouge ne dit pas si la mémoire a
+  oublié ou si le modèle a mal tourné sa phrase.
+- ⚠️ **Mais ça CONTREDIT la conception validée** : l'oral dit « on pose la question et on
+  vérifie que la réponse contient le `expected_substring` ». → **À reporter au formateur.**
+
+**Découverte bonus — l'éval fait déjà son travail** : les 6 échecs ne sont pas du bruit.
+`FACT_PATTERN` n'extrait que « Ma/Mon *clé* est *valeur* » ; la moitié des cas emploie d'autres
+tournures → rien n'est mémorisé (`'75011'` → mémoire vide, `'France 1998'` → vide).
+**0,50 est la mesure honnête de ce que le Chantier 1 fait vraiment.** Dette R1/R2 identifiée.
+
+**Contexte utile mesuré au passage :**
+- **T007 : 8/8 avec EchoLLM** — les réponses métier viennent des **outils** et de la **FAQ**,
+  pas du modèle. C'est pour ça que l'éval peut tourner hors-ligne sans rien perdre.
+- **T006 : dataset réel** = 23 `block` + 12 `allow` ; 32 `input` + 3 `output` ; catégories
+  graves = 14/23 (hate 3, violence 3, sexual 2, pii 3, secret_leak 3). `prompt_injection` (4)
+  et `out_of_scope` (5) ne sont PAS graves. Les 12 « legitimate » **sont** le détecteur de
+  faux positifs — celui qui a attrapé « rem**bourse**ment ».
+- `research.md §6` prévoyait `build_eval_agent()` (T011) avec `get_llm()` — vrai LLM si
+  configuré. Mais ça ne sauve pas les TESTS, qui passent `build_reference_agent()` (EchoLLM).
+
 ---
 
 ## ⏭️ À FAIRE
