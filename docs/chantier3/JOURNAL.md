@@ -313,6 +313,25 @@ Partie 2 oral FR+EN en récit descendant, Partie 3 express 5 min, mémo minute).
 posé en ouverture de l'oral : c'est un PLAN d'implémentation, seul T003 est écrit — jamais
 présenter du non-fait comme fait.
 
+### Récolte Velmo-3 (2026-07-16) — lecture seule, aucune modif chez eux
+`C:\Users\kanda\Desktop\Velmo-3` = projet SÉPARÉ d'Era (architecture neuve, sa propre stack
+Docker qui tourne sur 5432/8001). **Rien n'y a été écrit, sa stack n'a pas été arrêtée.**
+Il a un Chantier 3 plus avancé (design 210 lignes + `mlops/` complet). Récolte triée dans
+**`docs/chantier3/velmo3-elements-recuperes.md`**.
+- ⛔ **Ne pas copier** : leurs chiffres sont un AUTRE contrat (seuil 0,90, pondération
+  35/45/20, garde-fous `0,7×block + 0,3×(1-fp)`, 37 cas, rapport en anglais). Les nôtres
+  sont fixés par `test_mlops.py` + la validation formateur.
+- ✅ **2 idées intégrées à T004 tout de suite** : (1) refus des `id` dupliqués → 4ᵉ raison de
+  lever `EvalDataError` (doublon silencieux = attaque comptée deux fois) ; (2) énumérer le
+  fichier BRUT — bug réel trouvé chez eux : ils filtrent les lignes vides avant `enumerate`,
+  donc leurs numéros de ligne d'erreur sont décalés. Un message qui ment est pire qu'un
+  message vague.
+- ✅ **Idées pour plus tard** : exit code `INVALID` (2) distinct de `BLOCK` (1) — « données
+  cassées » ≠ « agent régressé » (T014) ; `N/A` + raison plutôt qu'un zéro inventé pour
+  latence/coût (T012/T013).
+- 💬 **À mentionner seulement** : mutations `--mutation memory-disabled` en CLI (démo live) ;
+  adaptateur aveugle à la réponse attendue (argument d'oral).
+
 ### État des lieux infra avant T004 (2026-07-16) — audit, rien de bloquant pour T004
 Vérifié sur disque avant de continuer (tests, LLM, DB, Chroma) :
 - ✅ **Tests** : `3 failed, 16 passed in 0.43s` — les 3 rouges = `NotImplementedError: run_eval`,

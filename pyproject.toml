@@ -25,6 +25,11 @@ llm = [
     "langchain-azure-ai>=1.0,<2.0",
     "azure-ai-inference>=1.0.0b9",
 ]
+# Interface web de démo (Gradio). HORS contrat du brief : l'interface imposée
+# reste `velmo.cli`. Extra optionnel — les tests n'en dépendent jamais.
+ui = [
+    "gradio>=5,<6",
+]
 
 [dependency-groups]
 dev = [

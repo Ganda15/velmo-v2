@@ -61,13 +61,14 @@ dangereuse en qualité logicielle : *« je n'ai rien trouvé »* devient *« il 
 **La règle que j'applique** : un fichier de test cassé doit faire **hurler** le système, jamais
 le rendre **optimiste**. En sécurité, le doute **ne profite pas** à l'accusé.
 
-**Les trois situations qui lèvent `EvalDataError`** :
+**Les QUATRE situations qui lèvent `EvalDataError`** :
 
 | Situation | Pourquoi c'est fatal et pas tolérable |
 |---|---|
 | **Fichier manquant** | Mauvais chemin ou fichier supprimé. Tolérer = évaluer sur du vide. |
 | **Fichier vide** | Le scénario ci-dessus. 0 cas → 100 % → livraison aveugle. |
 | **Ligne JSON invalide** | Une virgule en trop. Sauter la ligne = **perdre un cas silencieusement** — mes 35 attaques deviennent 34 et personne ne le sait. |
+| **`id` dupliqué** ⭐ | Deux cas avec le même `id` = **doublon silencieux** : la même attaque comptée deux fois, la note faussée, aucune erreur. Même famille que le bug T003 : **faux sans crasher**. *(Idée reprise de Velmo-3 — voir `velmo3-elements-recuperes.md`.)* |
 
 Le 3ᵉ cas est le plus vicieux : sauter une ligne cassée paraît « robuste », mais ça **dégrade la
 couverture sans le dire**. Le fichier a l'air complet, la note a l'air bonne, et il manque une
@@ -116,6 +117,19 @@ EvalDataError: eval/quality_cases.jsonl — fichier introuvable
 |---|---|
 | **Le chemin du fichier** | Trois fichiers passent par le même chargeur. Sans le nom, je ne sais même pas où chercher. |
 | **Le numéro de ligne** (`enumerate(..., start=1)`) | Le vrai gain. 55 lignes au total, mais une ligne de JSON fait 200 caractères — sans le numéro, je relis tout. **Numérotation à partir de 1**, pas 0 : c'est ce que mon éditeur affiche. |
+
+⚠️ **Piège sur le numéro de ligne** (bug réel trouvé dans le `cases.py` de Velmo-3) : si je filtre
+les lignes vides **avant** `enumerate`, le compteur suit la liste filtrée, **pas le fichier**. Une
+ligne blanche au milieu du `.jsonl` et tous les numéros suivants sont décalés — le message
+promet `fichier:ligne` et livre une **fausse** ligne. Un message qui ment est pire qu'un message
+vague : le vague fait chercher, le faux envoie au mauvais endroit. **Correctif** : énumérer le
+fichier brut et sauter les vides **dans** la boucle.
+
+```python
+for line_number, line in enumerate(texte.splitlines(), start=1):
+    if not line.strip():
+        continue          # on saute, mais line_number reste la VRAIE ligne
+```
 | **La cause d'origine** | Le message de `json.JSONDecodeError` dit *quoi* est cassé (virgule, guillemet). Le reproduire, c'est offrir le diagnostic avec l'adresse. |
 
 **Le détail technique qui compte** : lever avec `raise EvalDataError(...) from exc`. Le `from`
@@ -167,8 +181,8 @@ niveau plus profond. C'est exactement l'erreur qui m'avait coûté deux bugs en 
 | Question | Décision de code |
 |---|---|
 | Un seul chargeur ? | 1 privée `_load_jsonl()` + 3 publiques minces + 1 exception |
-| Fail-closed ? | 3 `raise EvalDataError` : manquant · vide · ligne invalide — jamais rattrapée |
-| Message d'erreur ? | `chemin:ligne — cause`, `enumerate(start=1)`, `raise ... from exc` |
+| Fail-closed ? | **4** `raise EvalDataError` : manquant · vide · ligne invalide · **`id` dupliqué** — jamais rattrapée |
+| Message d'erreur ? | `chemin:ligne — cause`, `enumerate` sur le **fichier brut**, `raise ... from exc` |
 | Chemin du dossier ? | `Path(__file__).resolve().parents[3] / "eval"` — **3**, pas 2 |
 
 **Vérification finale attendue** :
