@@ -529,6 +529,12 @@ tournures → rien n'est mémorisé (`'75011'` → mémoire vide, `'France 1998'
 - `research.md §6` prévoyait `build_eval_agent()` (T011) avec `get_llm()` — vrai LLM si
   configuré. Mais ça ne sauve pas les TESTS, qui passent `build_reference_agent()` (EchoLLM).
 
+**▶️ Argumentaire formateur prêt** : `docs/chantier3/oral-blocage-T005-formateur.md` (résumé
+30 s, oral FR+EN, mémo minute). Angle : on apporte un problème **mesuré** + une solution
+**testée**, on ne s'excuse pas — l'angle mort a été trouvé AVANT le code, ce qui est le travail.
+Argument central : *symétrie avec T006 — un rouge doit nommer UN coupable*. **T005 est en
+attente de son arbitrage.**
+
 ---
 
 ## ⏭️ À FAIRE
