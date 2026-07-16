@@ -34,7 +34,12 @@ def _build_agent() -> tuple[object, str]:
     VRAIE cause du repli : accuser Postgres quand c'est Chroma qui manque
     enverrait chercher au mauvais endroit.
     """
-    llm_name = "Kimi-K2.6 (Azure)" if os.getenv("AZURE_AI_INFERENCE_ENDPOINT") else "EchoLLM (hors-ligne)"
+    # Le nom du modèle se LIT, il ne se code pas en dur : afficher « Kimi » en
+    # faisant tourner autre chose serait un mensonge dans la démo.
+    if os.getenv("AZURE_AI_INFERENCE_ENDPOINT"):
+        llm_name = f"{os.getenv('AZURE_AI_INFERENCE_MODEL', '?')} (Azure)"
+    else:
+        llm_name = "EchoLLM (hors-ligne)"
     try:
         agent = build_default_agent()
         return agent, f"Postgres · {type(agent.kb).__name__} · {llm_name}"
