@@ -542,11 +542,19 @@ toujours la taille L » · « **Mes** clubs préférés **sont** l'OM » · « J
 « J'ai acheté le maillot mu-1999-treble » · « Contactez-moi par email » · « Je veux le Brazil
 1970 et le France 1998 ».
 
-**Cause 2 — l'agent n'appelle JAMAIS `forget()`.** C'est le feedback formateur du Chantier 1
-(« brancher la mémoire à l'agent »), **prouvé par la mesure** : le client dit « Oublie mon
-adresse de livraison », l'adresse est toujours là juste après. La méthode existe (écrite pour
-R5), elle n'est branchée nulle part. Le cas attend même que l'assistant réponde « Adresse
-supprimée ».
+**Cause 2 — CORRIGÉE 2 fois : l'agent APPELLE bien `forget()`, mais 2 bugs l'empêchent d'agir.**
+⚠️ J'avais d'abord dit « l'agent n'appelle jamais `forget()` » → **FAUX**. `agent.py:115` a bien
+la route « droit à l'oubli » qui appelle `self.memory.forget(user_id, target)`. Le feedback
+formateur « brancher la mémoire » **est fait**. Le bug est dans le CÂBLAGE, pas dans l'absence :
+- **Bug 2a** (`agent.py:120`) : `"plait."` (avec point) n'est pas dans les mots vides, qui
+  contiennent `"plait"` sans point. Le `.strip(" .!?")` nettoie la chaîne JOINTE, trop tard.
+  → cible = `'adresse livraison plait'` au lieu de `'adresse'`. **Fix** : nettoyer la ponctuation
+  PAR MOT (`w.strip(" .,!?;:'’")`) AVANT le filtre.
+- **Bug 2b** (`store.py:97`) : `forget()` teste `needle in row.key` → la cible doit être PLUS
+  COURTE que la clé. Une cible multi-mots ne peut jamais matcher une clé d'un mot. Sens inversé.
+  **Fix** : matcher PAR MOT — `any(w in row.key or w in row.value.lower() for w in needle.split())`.
+- **Vérifié** : les 2 fix règlent R5-oubli-adresse ET R5-oubli-commande, et **le contrat
+  `test_memory` reste vert** (il appelle `forget("adresse")` en direct → chemin non touché).
 
 **⚠️ `R5-oubli-commande` est un FAUX POSITIF** : il passe parce que la mémoire est **vide** —
 l'interdit est absent puisque rien n'a jamais été retenu (« Ma commande O-2024-0199 me pose
