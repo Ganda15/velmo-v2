@@ -15,12 +15,23 @@ prétend jamais tourner sur la vraie stack quand ce n'est pas le cas.
 
 from __future__ import annotations
 
+import logging
 import os
 
 import gradio as gr
 from dotenv import load_dotenv
 
-from velmo.agent import build_default_agent
+# Bruit de démarrage à taire (rien à voir avec Velmo) :
+# chromadb 0.5 appelle `posthog.capture(id, name, props)` en positionnel, mais
+# la version de posthog installée n'accepte plus qu'un argument. Sa télémétrie
+# échoue donc et logge « Failed to send telemetry event » — un faux message
+# d'erreur au lancement. `ANONYMIZED_TELEMETRY=False` ne ferme pas ce chemin,
+# on tait donc le logger précis, et lui seul : rien de Velmo n'est masqué.
+os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+logging.getLogger("chromadb.telemetry.product.posthog").setLevel(logging.CRITICAL)
+
+from velmo.agent import build_default_agent  # noqa: E402
 
 load_dotenv()
 
