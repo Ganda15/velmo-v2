@@ -79,6 +79,15 @@ Avant `/speckit-plan`, croisé le CONTRAT réel (`tests/acceptance/test_mlops.py
 ### Étape 2 — Schéma boucle qualité
 **FAIT (2026-07-11).** `schema-chantier3-boucle-qualite.png` + `.drawio` (racine du projet et vault).
 Reste : validation formateur + 4 justifications (seuil, anti-bruit, pondération, définition version).
+**MAJ 2026-07-15** : oral de conception créé (`oral-conception-chantier3.md` — Parties 1 détails
+exacts, 2 oral 5 points FR+EN, 3 version express 5 min) → prêt à présenter au formateur pour
+validation AVANT de coder T004.
+**🔴→🟢 MAJ 2026-07-16 — coquille d'échelle corrigée AVANT le formateur** : deux boîtes du schéma
+disaient « → note /100 » (SUITE MÉMOIRE et SUITE QUALITÉ) alors que TOUTE la conception est en
+échelle 0–1 (seuil 0,8, `enforce_threshold(scores, 0.8)`, dossier + oral). Un lecteur voyait
+« note sur 100 → seuil 0,8 » = contradiction. Corrigé dans le `.drawio` (2 cellules) + PNG
+régénéré et vérifié visuellement. Leçon : relire le SCHÉMA avec les mêmes yeux que le code —
+c'est le support que le formateur voit en premier.
 
 ### Étape 3 — Constitution (`/speckit-constitution`)
 **FAIT (2026-07-11).** `.specify/memory/constitution.md` rempli (v1.0.0, ratifiée et
@@ -208,6 +217,136 @@ taillées ~15-30 min chacune. `T005`/`T006`/`T007` (les 3 suites) et `T010`/`T01
 (seuil/agent CLI) sont parallélisables (fichiers indépendants).
 
 Prêt pour `/speckit-implement` ou implémentation manuelle par Era, tâche par tâche.
+
+### 🎁 BONUS (hors contrat du brief) — Observabilité LangSmith (C20) — 2026-07-15
+
+**Contexte** : après analyse du Velmo « insane » d'un camarade (Steeve) qui trace ses tours
+d'agent dans LangSmith, décision d'ajouter une couche d'observabilité EN BONUS — pratiquer un
+vrai outil MLOps et enrichir la preuve **C20 (monitoring)**. ⚠️ **Ce n'est PAS un livrable du
+brief** : le contrat reste `tests/acceptance/test_mlops.py` (T004–T013). LangSmith = le dessert,
+pas le plat.
+
+**AVANT — comprendre** : un *harness* (concept de la vidéo Tejas Kumar, IBM) = le système
+déterministe qui ENTOURE le LLM pour le fiabiliser ; l'observabilité en fait partie. Velmo est
+déjà un harness (mémoire + garde-fous + éval). LangSmith trace chaque tour SANS toucher à la
+logique d'orchestration.
+
+**APRÈS — fait et vérifié** :
+- `uv add langsmith` (0.9.7) → dépendance ajoutée à `pyproject.toml`.
+- `src/velmo/agent.py` : import **DÉFENSIF** de `traceable` (si la lib est absente → décorateur
+  neutre qui renvoie la fonction inchangée ; les tests ne dépendent JAMAIS de LangSmith) +
+  `@traceable(run_type="chain", name="agent_turn")` sur `respond()`.
+- `.env` : bloc `LANGSMITH_*` (`LANGSMITH_TRACING=true` + endpoint `eu` + projet `velmo` + clé).
+  `.env` bien gitignored 🔑 (la clé ne partira pas dans un commit).
+- `docs2/demo_langsmith.py` : rejoue 3 messages via `agent.respond()` pour générer des traces.
+- 🟢 **Non-régression prouvée** : `16 passed, 3 failed` = état identique d'avant (les 3 rouges
+  restent les stubs Chantier 3). L'ajout n'a rien cassé.
+- 🟢 **Traces visibles** dans LangSmith (projet `velmo`) : 3 traces `agent_turn` avec Input/Output.
+
+**À RETENIR** : 1 span par tour pour l'instant (`agent_turn`) ; les sous-spans détaillés
+(`guardrails_input`, `memory_retrieval`, `llm_call`, `guardrails_output` — comme Steeve) sont une
+évolution possible (décorer `check_input`/`memory.read`/`_handle`/`check_output`). Le `llm_call`
+est en **EchoLLM** tant que la clé Azure/Kimi n'est pas posée — suffisant pour démontrer C20. Le
+**flag d'env décide** : présent = tracé, absent = silencieux → tests offline intacts.
+
+### 🔴→🟢 Faille n°3 des garde-fous — trouvée AVANT T006, par la mesure (2026-07-16)
+
+**Contexte** : en analysant le Velmo d'un camarade (`tonylucas`), vu son `matches_any()` qui
+matche le **mot entier** au lieu de la sous-chaîne. Vérifié sur MON code → vrai bug.
+
+**AVANT — le bug** : `check_input`/`check_output` faisaient `any(cle in low for cle in cles)`,
+donc une recherche **n'importe où dans la chaîne**. Résultat, des clients légitimes bloqués :
+- « Je voudrais un rem**bourse**ment » → mot-clé `bourse` → bloqué `out_of_scope` 💥
+- « Je veux t**race**r ma commande » → mot-clé `race` → bloqué `hate` 💥
+- « Je voudrais effec**tuer** un retour » → mot-clé `tuer` → bloqué `violence` 💥
+Les 3 cas d'usage les plus courants d'un SAV. Présent dans les vraies données d'éval
+(`legit-4` de `guardrail_cases.jsonl`) → **taux de faux positifs = 1/12 = 8,3 %**.
+
+**⚠️ LE PIÈGE — le correctif « évident » était PIRE que le bug** : matcher le **mot entier**
+(`(?<!\w)cle(?!\w)`) supprime bien les faux positifs (0,083 → 0,000) et fait *monter* la note
+brute (0,917 → 0,950)… **mais rate `hate-3`** : le mot-clé est `sous-humain` (singulier), le
+message dit « des sous-humain**s** » (pluriel) → l'ancre de fin refuse le `s` → **haine non
+détectée → fuite grave → note globale = 0**. Mesuré, pas supposé.
+
+**APRÈS — le bon correctif** : `_contient()` qui n'ancre **que le début du mot**
+(`(?<!\w)` seul, pas d'ancre de fin) :
+- « rem|bourse » → le `m` avant est une lettre → **plus de match** ✅
+- « sous-humain|s » → début de mot OK, le `s` final toléré → **toujours détecté** ✅
+- « hais » matche toujours « haissent » (conjugaisons préservées).
+
+**Mesures des 3 stratégies (sur les 35 cas réels) :**
+| Stratégie | Blocage | Faux positifs | Fuite grave | Note |
+|---|---|---|---|---|
+| sous-chaîne (avant) | 1.000 | 0.083 | non | 0.917 |
+| mot entier (naïf) | 0.950 | 0.000 | **OUI** | **0.000** |
+| **début de mot (retenu)** | **1.000** | **0.000** | non | **1.000** |
+
+🟢 **Non-régression** : `16 passed, 3 failed` inchangé. Note garde-fous **0,917 → 1,000**
+(+0,029 sur la note globale via le poids 35 %).
+
+**À RETENIR (oral)** : (1) **3e faille trouvée alors que les tests étaient verts** — un test vert
+ne prouve que ce qu'on a pensé à tester ; (2) **le correctif évident était le pire** : sans la
+mesure, j'aurais « amélioré » ma note à zéro. On mesure avant de croire ; (3) **limite assumée du
+versionnage** : mon `version_id` hashe la **config** (les mots-clés), pas la **logique** — ce
+correctif change le comportement SANS changer l'empreinte. Même classe de bug que l'incident T003
+(`sorted(dict)` → versionnage menteur). La définition de version vient du brief ; sa limite est
+identifiée.
+
+### Schéma n°2 — VUE IMPLÉMENTATION (2026-07-16)
+Deuxième schéma créé : `schema-chantier3-implementation.drawio` + `.png` (même dossier).
+Complète le schéma « boucle qualité » (le POURQUOI, pour le formateur) par le COMMENT :
+fichiers réels (`cases.py`, `suites/*.py`, `scoring.py`, `versioning.py`, `__init__.py`,
+`eval_agent.py`, `score.py`, `quality.yml`, `report.md`), fonctions exactes, numéros de
+tâches T003–T015, encadré CONTRAT (`test_mlops.py`, à ne jamais modifier) et ordre de code
+en pied de page. Usage : carte de route pendant le codage TDD + support si le formateur
+demande « et concrètement, tu commences par quoi ? ».
+**MAJ v2 (même jour)** : refonte « propre » sur demande d'Era — boîtes auto-dimensionnées
+sur le texte MESURÉ (zéro débordement possible, c'est le code qui garantit la mise en page),
+4 conteneurs d'étapes en fond pâle avec titres, flèches courbes qui s'arrêtent AVANT le
+conteneur suivant (elles ne traversent plus les titres), étiquettes sur fond gris, légende
+des couleurs à droite. Le `.drawio` a été refait dans le même style (conteneurs + légende).
+**MAJ v3 — nettoyage présentation** : retrait des mots de cuisine interne (« Era », « TDD »,
+« déjà fait ») — une étiquette de présentation dit CE QUE LA CHOSE EST, pas son statut de
+chantier ni qui l'écrit. Le statut se dit à l'oral. Vérifié : 0 occurrence dans le .drawio.
+**Oral du schéma 2 créé** : `oral-implementation-chantier3.md` (Partie 1 détails pour étudier,
+Partie 2 oral FR+EN en récit descendant, Partie 3 express 5 min, mémo minute). Cadre d'honnêteté
+posé en ouverture de l'oral : c'est un PLAN d'implémentation, seul T003 est écrit — jamais
+présenter du non-fait comme fait.
+
+### État des lieux infra avant T004 (2026-07-16) — audit, rien de bloquant pour T004
+Vérifié sur disque avant de continuer (tests, LLM, DB, Chroma) :
+- ✅ **Tests** : `3 failed, 16 passed in 0.43s` — les 3 rouges = `NotImplementedError: run_eval`,
+  baseline intacte. Données d'éval : 12/35/8 lignes = pile le green check de T004.
+- 🟠 **LLM Azure** : le `.env` de Velmo-2.2 est le TEMPLATE (`your-azure-ai-key`), le vrai `.env`
+  est resté dans `velmo-v2` (pas suivi la copie). En plus l'extra `llm` n'est pas installé →
+  reproduit : `get_llm()` CRASH `ModuleNotFoundError: langchain_azure_ai`. Contraste utile pour
+  l'oral : `get_kb()` a un `try/except ImportError` (repli doux LocalKB), `get_llm()` non.
+- 🟠 **Chroma/Postgres** : `chromadb` absent du venv (extra `vector` jamais synchronisé),
+  ports 5432 et 8001 fermés, Docker éteint → `build_default_agent()` planterait (déjà connu).
+- **Décision** : T004 ne lit que des `.jsonl` → aucun de ces points ne le bloque. Réparation
+  infra reportée au moment d'une démo live. À faire alors : copier le vrai `.env`, `uv sync
+  --extra llm --extra vector`, démarrer Docker (Postgres + Chroma).
+
+---
+
+### ✅ CONCEPTION VALIDÉE PAR LE FORMATEUR (2026-07-16) — le verrou saute
+Le formateur a validé la conception du Chantier 3 (schéma boucle qualité + 4 décisions : seuil
+0,8, pondération 35/35/30 + garde-fou grave éliminatoire, anti-bruit 3 runs, définition de
+version). Responsable Chantier 3 confirmé, dans la continuité des Chantiers 1 et 2.
+**Conséquence : la règle « pas une ligne de code avant validation » est levée → T004 peut être
+codé.** Support utilisé : `oral-conception-chantier3.md` + `schema-chantier3-boucle-qualite.png`.
+
+### Bloc AVANT de T004 — les 3 décisions écrites avant le code (2026-07-16)
+Fiche dédiée : **`docs/chantier3/T004-conception-cases.md`**. Les 3 questions qui décident du
+code, répondues AVANT d'écrire : (1) un seul chargeur = un seul endroit où la règle de sécurité
+est écrite ; (2) fail-closed parce que 0 cas → note 100 % → la CI livrerait un agent sans
+garde-fous (même philosophie que le `serious_leak` éliminatoire) ; (3) message d'erreur =
+`chemin:ligne — cause`, sinon débug à l'aveugle sur 55 lignes de JSON.
+🔴 **Piège trouvé en lisant le code réel** : `kb_store.py:14` utilise
+`Path(__file__).resolve().parents[2]` pour trouver `kb/docs`, mais `cases.py` est **un niveau
+plus profond** (`src/velmo/mlops/`) → il lui faut **`parents[3]`**. Mesuré : `parents[2]` →
+`src/` (pas de `eval/`), `parents[3]` → racine (✅). Même famille que l'incident T003 : copier un
+motif sans vérifier son contexte. Différence : celui-là crasherait, T003 mentait en silence.
 
 ---
 
