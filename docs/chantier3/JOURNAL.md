@@ -417,6 +417,33 @@ motif sans vérifier son contexte. Différence : celui-là crasherait, T003 ment
 
 ---
 
+### ▶️ T004 LANCÉ (2026-07-16) — instruction passée à la session VS Code
+**Pourquoi T004 maintenant, et pourquoi il compte** (le raisonnement, pas juste la tâche) :
+la chaîne du Chantier 3 est `données → suites → note → gate CI`, et cette note finit par avoir
+le **pouvoir de refuser une livraison**. T004 est l'**entrée** de cette chaîne.
+- En remontant depuis la fin : la CI décide sur la foi d'un nombre ; ce nombre vient d'un
+  calcul ; ce calcul vient de cas de test. **Si les cas sont mal chargés, tout l'aval est faux
+  — mais faux avec l'air d'être vrai.** Une note de 0,92 sur 34 attaques au lieu de 35
+  ressemble trait pour trait à une note de 0,92 sur 35. Personne ne voit rien, et la CI livre.
+- D'où le **fail-closed** : le chargeur doit REFUSER plutôt qu'approximer. Une note absente
+  fait râler ; une note fausse fait livrer. **Une mesure fausse est pire que pas de mesure**,
+  parce qu'on lui fait confiance.
+- **Pourquoi avant T005/T006/T007** : les trois suites importent de `cases.py`, il les bloque.
+  **Pourquoi un SEUL chargeur** : trois lecteurs = trois façons de rater la même erreur.
+- **RNCP** : première brique de **C12** (tests automatisés du modèle). Réponse à « comment tu
+  sais que ton éval mesure vraiment quelque chose ? » — ça commence par refuser d'évaluer sur
+  des données non vérifiées.
+- **Les 3 tests restent rouges après T004, et c'est sain** : T004 ouvre la porte des données,
+  il ne produit aucune note. Un rouge attendu qui reste rouge POUR LA MÊME RAISON prouve
+  qu'on n'a pas dévié.
+
+Conception figée dans `docs/chantier3/T004-conception-cases.md` (4 raisons de lever
+`EvalDataError`, piège `parents[3]`, énumération du fichier brut). Contre-vérification prévue
+sur disque : `parents[3]` réellement présent, numéros de ligne testés en cassant un `.jsonl`
+exprès, 4 `raise` présents, 3 tests toujours rouges pour la même raison.
+
+---
+
 ## ⏭️ À FAIRE
 
 ### Étape 5 — Les 3 suites d'évaluation (TDD, Era code) ← ON EST ICI
