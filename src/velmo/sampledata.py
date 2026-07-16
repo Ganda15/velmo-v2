@@ -214,4 +214,9 @@ def seed(session) -> None:
         _escalations(),
     ):
         session.add_all(batch)
+        # Flush par lot : sans lui, SQLAlchemy réordonne les INSERT à partir des
+        # `relationship()` — or `Escalation` n'a que des ForeignKey nues, donc il
+        # insère `escalations` avant `orders`. Invisible sur SQLite (clés
+        # étrangères non appliquées par défaut), fatal sur Postgres.
+        session.flush()
     session.commit()

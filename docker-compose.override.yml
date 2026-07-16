@@ -1,0 +1,29 @@
+# Surcharge locale — NE modifie PAS le docker-compose.yml du formateur.
+# Docker Compose fusionne automatiquement ce fichier par-dessus.
+#
+# Pourquoi : un autre projet (Velmo-3) occupe déjà 5432 et 8001 sur cette
+# machine. On déplace donc les ports côté HÔTE uniquement. À l'intérieur du
+# réseau Docker, rien ne change : postgres écoute toujours 5432 et chroma 8000,
+# donc `kb_store.py` (qui code `host="chroma", port=8000` en dur) marche
+# toujours depuis le conteneur `app`.
+#
+# `!override` est indispensable : sans lui, Compose CONCATÈNE les listes de
+# ports au lieu de les remplacer — il tenterait 5432 ET 5434, donc échouerait
+# sur le port déjà pris.
+services:
+  postgres:
+    ports: !override
+      - "5434:5432"
+
+  chroma:
+    # Le compose du formateur tire `chromadb/chroma:latest`, mais son pyproject
+    # épingle le client `chromadb>=0.5,<0.6`. `latest` est passé en 1.x depuis :
+    # le client 0.5 ne sait plus lire les réponses du serveur 1.x
+    # (KeyError: '_type'). On épingle donc le serveur sur la version du client.
+    image: chromadb/chroma:0.5.23
+    ports: !override
+      - "8011:8000"
+
+  app:
+    ports:
+      - "7860:7860"   # démo Gradio servie depuis le conteneur

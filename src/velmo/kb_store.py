@@ -83,7 +83,12 @@ def get_kb():
     except ImportError:
         return LocalKB()
 
-    client = chromadb.HttpClient(host="chroma", port=8000)
+    # Mêmes variables que `scripts/seed_kb.py`, mêmes défauts : dans le réseau
+    # Docker rien ne change (`chroma:8000`), et depuis l'hôte on peut viser le
+    # port publié. Sans ça, `host="chroma"` ne résout pas hors conteneur.
+    client = chromadb.HttpClient(
+        host=os.getenv("CHROMA_HOST", "chroma"), port=int(os.getenv("CHROMA_PORT", "8000"))
+    )
     embedder = embedding_functions.SentenceTransformerEmbeddingFunction(
         model_name=os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-small")
     )
