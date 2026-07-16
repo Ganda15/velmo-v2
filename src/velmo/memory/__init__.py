@@ -6,9 +6,21 @@ L'implémentation interne (court terme, long terme, orchestration) est à constr
 
 from __future__ import annotations
 
+import re
+
 from dataclasses import dataclass, field
 
+from sqlalchemy import select
+
+from .store import MemoryFact, Session
+
 Turn = tuple[str, str]  # (role, content)
+
+# Motif « Ma commande prioritaire est X » / « Mon adresse de livraison est X »
+FACT_PATTERN = re.compile(
+    r"\b(?:ma|mon)\s+(.+?)\s+est\s+(.+?)[.!?]?$",
+    re.IGNORECASE,
+)
 
 
 @dataclass
@@ -38,19 +50,55 @@ class MemoryManager:
 
     def read(self, user_id: str, message: str) -> MemoryContext:
         """Reconstitue le contexte mémoire pertinent pour `message`."""
-        return MemoryContext()
+        with Session() as session:
+            rows = session.scalars(
+                select(MemoryFact).where(
+                    MemoryFact.user_id == user_id,
+                    MemoryFact.deleted.is_(False),
+                )
+            ).all()
+            facts = {row.key: row.value for row in rows}
+        return MemoryContext(facts=facts)
 
     def write(self, user_id: str, user_message: str, assistant_message: str) -> None:
         """Met à jour la mémoire à partir d'un échange."""
-        return None
+        match = FACT_PATTERN.search(user_message)
+        if match is not None:
+            key = match.group(1).strip().lower()
+            value = match.group(2).strip()
+            self.remember_fact(user_id, key, value)
 
     def remember_fact(self, user_id: str, key: str, value: str) -> None:
         """Persiste un fait durable sur l'utilisateur."""
-        return None
+        with Session() as session:
+            existing = session.scalars(
+                select(MemoryFact).where(
+                    MemoryFact.user_id == user_id,
+                    MemoryFact.key == key,
+                    MemoryFact.deleted.is_(False),
+                )
+            ).first()
+            if existing is not None:
+                existing.value = value
+            else:
+                session.add(MemoryFact(user_id=user_id, key=key, value=value))
+            session.commit()
 
     def forget(self, user_id: str, target: str) -> int:
         """Supprime les souvenirs correspondant à `target`. Renvoie le nombre supprimé."""
-        return 0
+        needle = target.strip().lower()
+        with Session() as session:
+            rows = session.scalars(
+                select(MemoryFact).where(
+                    MemoryFact.user_id == user_id,
+                    MemoryFact.deleted.is_(False),
+                )
+            ).all()
+            hits = [row for row in rows if needle in row.key or needle in row.value.lower()]
+            for row in hits:
+                row.deleted = True
+            session.commit()
+            return len(hits)
 
     def inspect(self, user_id: str) -> dict:
         """Renvoie l'état mémoire d'un utilisateur (faits + souvenirs épisodiques)."""
