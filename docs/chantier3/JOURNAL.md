@@ -332,6 +332,54 @@ Il a un Chantier 3 plus avancé (design 210 lignes + `mlops/` complet). Récolte
 - 💬 **À mentionner seulement** : mutations `--mutation memory-disabled` en CLI (démo live) ;
   adaptateur aveugle à la réponse attendue (argument d'oral).
 
+### 🟢 STACK COMPLÈTE DEBOUT (2026-07-16) — Postgres + Chroma + HF + gpt-5.4
+Vérifié de bout en bout : bandeau `Postgres · ChromaKB · gpt-5.4 (Azure)`, question métier
+répondue depuis Postgres, FAQ répondue depuis Chroma, attaque bloquée. Démo Gradio sur
+`http://127.0.0.1:7860`. Postgres peuplé (10 clients, 14 commandes), Chroma indexe 16
+documents, recherche sémantique correcte (« comment renvoyer un maillot » → `politique-retour`,
+sans mot-clé commun). Tests du formateur inchangés : `3 failed, 16 passed`.
+
+**LLM : gpt-5.4** (ressource Azure de Velmo-3) — choix d'Era. ⚠️ Le brief impose Kimi-K2.6.
+Le `.env` porte un bloc « REPLI BRIEF » avec les 3 lignes Kimi en commentaire : retour à la
+conformité en 10 secondes. Ce qui bloquait gpt-5.4 n'était pas la clé mais le **format
+d'endpoint** : Velmo-3 stocke `…openai.azure.com/` (API Azure OpenAI classique), le code du
+formateur attend le chemin Foundry → il fallait ajouter `/openai/v1`.
+
+**Hugging Face : aucune clé nécessaire.** `sentence-transformers` charge
+`intfloat/multilingual-e5-small` en local sur CPU depuis le Hub public (vérifié : vecteurs
+384 dimensions). Velmo-3 n'avait pas de clé HF non pas par oubli — parce qu'il n'en faut pas.
+
+#### 🔴→🟢 Trois bugs trouvés en branchant la vraie stack — MÊME cause racine
+**Tous invisibles jusque-là parce que TOUS les tests tournent sur SQLite + LocalKB.** C'est la
+leçon des garde-fous (« un test vert ne prouve que l'absence des bugs auxquels on a pensé »),
+appliquée à l'infrastructure : *un test vert ne garantit que ce que l'environnement de test
+sait vérifier*. Matériau d'oral.
+1. **`sampledata.seed()` cassait sur Postgres** (`ForeignKeyViolation`). SQLAlchemy ordonne les
+   INSERT au flush à partir des `relationship()` ; `Escalation` n'a que des `ForeignKey` nues →
+   il insérait `escalations` AVANT `orders`. **SQLite n'applique pas les FK par défaut** → vert
+   depuis toujours ; Postgres les applique → rouge. Corrigé : `session.flush()` par lot, l'ordre
+   de la boucle (déjà correct) devient l'ordre des INSERT. Aucun effet sur SQLite.
+2. **`kb_store.get_kb()` codait `host="chroma", port=8000` en dur** → ne résout pas hors du
+   réseau Docker. Or `scripts/seed_kb.py` lit déjà `CHROMA_HOST`/`CHROMA_PORT` : même projet,
+   même auteur, deux conventions. Aligné sur la sienne, mêmes défauts → conteneur inchangé.
+3. **`chromadb/chroma:latest` vs client épinglé `<0.6`** : `latest` est passé en 1.x, le client
+   0.5 ne sait plus lire ses réponses (`KeyError: '_type'`). Tag non épinglé = marchait le jour
+   de l'écriture, casse aujourd'hui. Serveur épinglé en `0.5.23` dans l'override.
+
+#### Infra : ce qui a été touché, et ce qui ne l'a PAS été
+- **`docker-compose.override.yml` (nouveau)** : le `docker-compose.yml` du formateur reste
+  INTACT. Ports déplacés (**5434**, **8011**) car Velmo-3 occupe 5432/8001. ⚠️ `!override`
+  obligatoire : sans lui Compose **concatène** les listes de ports au lieu de les remplacer.
+- **Les deux stacks coexistent** : `velmo-3` (5432/8001) et `velmo-22` (5434/8011/7860).
+  Velmo-3 n'a jamais été touché.
+- ⚠️ **Piège alembic** : `alembic/env.py` ne fait **jamais** `load_dotenv()` → `DB_URL` valait
+  `None` → le défaut codé en dur de `db.py:168` pointait sur **la base de Velmo-3**. Seul le mot
+  de passe a arrêté la migration. Contournement : exporter `DB_URL` avant `alembic`.
+- **Bruit de démarrage tu** : `chromadb` 0.5 appelle `posthog.capture()` en positionnel, posthog
+  récent n'accepte plus qu'un argument → faux message d'erreur. `ANONYMIZED_TELEMETRY=False` ne
+  ferme PAS ce chemin (vérifié). Seul le logger `chromadb.telemetry.product.posthog` est tu —
+  jamais plus large, sinon on masquerait une vraie panne de Chroma le jour venu.
+
 ### État des lieux infra avant T004 (2026-07-16) — audit, rien de bloquant pour T004
 Vérifié sur disque avant de continuer (tests, LLM, DB, Chroma) :
 - ✅ **Tests** : `3 failed, 16 passed in 0.43s` — les 3 rouges = `NotImplementedError: run_eval`,
