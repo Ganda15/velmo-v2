@@ -502,11 +502,28 @@ ABSENTE). Appliqué à la lettre → `KeyError: 'expected_substring'`. Reproduit
 - Rien à changer ailleurs : le test, `conftest`, le seuil (0,8 littéral) et la pondération
   (validée formateur) sont tous verrouillés.
 
-**✅ Option A — testée, elle marche** : la suite mémoire évalue **l'ÉTAT de la mémoire**
-(`memory.read(user_id, q).facts`) au lieu de la **phrase du LLM**. Le rejeu passe toujours par
-`respond()` (l'état construit reste réel), seule la vérification finale change.
-- Mesuré : **mémoire 6/12 = 0,50** → `globale = 0,825` → **PASSE** le seuil. Dégradé → 0,0
-  (garde-fous à 0 + `serious_leak`) → bloqué. **Les 3 tests passeraient.**
+**🔴 CORRECTION (même soirée) — mon « 6/12 → 0,825 → PASSE » était FAUX.**
+La 1re simulation créait un agent neuf par cas, en croyant repartir propre. Or `store.py:44`
+définit `_ENGINE` au **niveau module** avec `StaticPool` → **une seule base mémoire pour tout le
+processus**. Un agent neuf ne remet donc RIEN à zéro. Et **5 des 12 cas partagent
+`C-marc-dubois`**, 3 partagent `C-sophie-martin` → les faits du cas 1 traînaient dans le cas 4.
+**`R2-clubs` passait par contamination** = **faux positif**. Un vert qui ment — exactement le
+bug que cette suite est censée traquer, fabriqué dans l'outil qui doit le traquer. Leçon :
+*l'isolement n'est pas de la propreté, c'est ce qui rend la mesure vraie* — même raison que le
+portique appelé en direct dans T006.
+
+**✅ Option A (évaluer l'ÉTAT mémoire, pas la phrase) — CHIFFRES RÉELS après correction :**
+Réinitialisation par `memory.forget(user_id, "")` avant chaque cas (la chaîne vide matche toute
+clé → vide ce user via l'API publique). **Uniquement le user du cas** : vider tout ferait
+« passer » R3 (isolation) sans rien prouver, puisqu'il n'y aurait plus rien à faire fuiter.
+
+| Variante | mémoire | globale | verdict |
+|---|---|---|---|
+| Honnête (l'agent doit oublier lui-même) | **4/12 = 0,333** | **0,767** | 🔴 bloqué |
+| Si la suite appelle `forget()` à la place de l'agent | 5/12 = 0,417 | 0,796 | 🔴 bloqué quand même |
+| **Cible minimale** | **6/12 = 0,500** | **0,825** | 🟢 passe |
+
+→ **L'option A ne sauve PAS le seuil.** Le problème n'est pas la suite.
 - **Justification de fond** : symétrie avec T006. T006 isole le **garde-fou** de la chaîne,
   T005 doit isoler la **mémoire** du LLM — même raison : *un rouge doit nommer UN coupable*.
   Si la note mémoire dépend du talent du LLM à formuler, un rouge ne dit pas si la mémoire a
@@ -514,10 +531,32 @@ ABSENTE). Appliqué à la lettre → `KeyError: 'expected_substring'`. Reproduit
 - ⚠️ **Mais ça CONTREDIT la conception validée** : l'oral dit « on pose la question et on
   vérifie que la réponse contient le `expected_substring` ». → **À reporter au formateur.**
 
-**Découverte bonus — l'éval fait déjà son travail** : les 6 échecs ne sont pas du bruit.
-`FACT_PATTERN` n'extrait que « Ma/Mon *clé* est *valeur* » ; la moitié des cas emploie d'autres
-tournures → rien n'est mémorisé (`'75011'` → mémoire vide, `'France 1998'` → vide).
-**0,50 est la mesure honnête de ce que le Chantier 1 fait vraiment.** Dette R1/R2 identifiée.
+**🎯 LE VRAI RÉSULTAT — la boucle qualité prouve que le CHANTIER 1 N'EST PAS FINI**
+Ce n'est pas un problème du Chantier 3 : **c'est le Chantier 3 qui fait son travail**, et son
+premier acte est de mesurer un trou dans le Chantier 1. Deux causes, mesurées :
+
+**Cause 1 — `FACT_PATTERN` ne capte qu'UNE tournure.** Le motif est
+`\b(?:ma|mon)\s+(.+?)\s+est\s+(.+?)[.!?]?$` → uniquement « Ma/Mon *X* **est** *Y* ». **6 cas sur
+12 mémorisent RIEN** (mémoire `{}`) : « Je suis à Paris, code postal 75011 » · « Je porte
+toujours la taille L » · « **Mes** clubs préférés **sont** l'OM » · « Je suis revendeur » ·
+« J'ai acheté le maillot mu-1999-treble » · « Contactez-moi par email » · « Je veux le Brazil
+1970 et le France 1998 ».
+
+**Cause 2 — l'agent n'appelle JAMAIS `forget()`.** C'est le feedback formateur du Chantier 1
+(« brancher la mémoire à l'agent »), **prouvé par la mesure** : le client dit « Oublie mon
+adresse de livraison », l'adresse est toujours là juste après. La méthode existe (écrite pour
+R5), elle n'est branchée nulle part. Le cas attend même que l'assistant réponde « Adresse
+supprimée ».
+
+**⚠️ `R5-oubli-commande` est un FAUX POSITIF** : il passe parce que la mémoire est **vide** —
+l'interdit est absent puisque rien n'a jamais été retenu (« Ma commande O-2024-0199 me pose
+souci » n'a pas de « est » → pas de match). Il passe sans rien prouver. Le vrai score honnête
+est donc **3 cas réellement démontrés sur 12**.
+
+**➡️ Le chemin : réparer la mémoire, pas contourner l'éval.** Brancher `forget()` seul donne
+5/12 → 0,796 → toujours bloqué. Il faut AUSSI élargir l'extraction. Cible **6/12 minimum**.
+Faire appeler `forget()` par la suite elle-même = tricher : ça masquerait exactement le trou à
+boucher, et ça ne suffirait même pas.
 
 **Contexte utile mesuré au passage :**
 - **T007 : 8/8 avec EchoLLM** — les réponses métier viennent des **outils** et de la **FAQ**,

@@ -1,209 +1,211 @@
-# Oral — Le blocage de la suite mémoire (à présenter au formateur)
+# Oral — Ce que la boucle qualité révèle (à présenter au formateur)
 
-> **Format** : conversation de 3 minutes, pas une présentation. Tu apportes un problème
-> **mesuré**, une solution **testée**, et tu demandes un arbitrage sur un écart à la conception
-> qu'il a validée.
+> **Format** : conversation de 5 minutes. Tu apportes un problème **mesuré**, une cause
+> **identifiée**, et deux questions à arbitrer.
 >
-> **Ce que tu ne fais PAS** : t'excuser, ou présenter ça comme un échec. Tu as trouvé un angle
-> mort de la conception **avant** d'écrire le code, avec des chiffres. C'est le travail.
+> **Le retournement à comprendre avant de parler** : ce n'est **pas** un problème du Chantier 3.
+> C'est le Chantier 3 qui fait son travail — et son premier acte est de prouver, chiffres à
+> l'appui, que **le Chantier 1 n'est pas fini**. C'est exactement ce que tu lui avais dit.
 
 ---
 
-## Le résumé en 30 secondes (si tu n'as que ça)
+## Le résumé en 30 secondes
 
-« Avant de coder la suite mémoire, je l'ai simulée sur l'agent de référence. Elle donne **zéro**.
-Pas parce que ma mémoire est cassée — elle marche, je l'ai tracée — mais parce que la question
-d'évaluation tombe sur le LLM, et que l'agent de référence utilise `EchoLLM`, qui répète la
-question au lieu d'y répondre. Note mémoire zéro, note globale 0,65, sous le seuil de 0,8 :
-**l'agent sain serait bloqué et le test de régression échouerait**. J'ai une solution testée qui
-remonte à 0,825, mais elle change ce que la note mesure — d'où ma question. »
+« Avant de coder la suite mémoire, je l'ai simulée. Elle donne **4 sur 12**, note globale
+**0,767**, sous le seuil de 0,8 : l'agent sain serait bloqué. J'ai cherché pourquoi. Ce n'est pas
+la suite qui est fausse — c'est ma mémoire qui ne capte qu'**une seule tournure de phrase**, et
+mon agent qui **n'appelle jamais** `forget()`. Six cas sur douze ne mémorisent **rien du tout**.
+Donc ma boucle qualité, dès son premier run, me dit que mon Chantier 1 est incomplet. C'est
+précisément ce qu'elle doit faire. J'ai deux questions à te poser. »
 
 ---
 
 ## 🗣️ Français
 
-**Le problème, et comment je l'ai trouvé.**
+**Ce que j'ai fait, et ce que j'ai trouvé.**
 
-« Avant d'écrire la suite mémoire, j'ai fait ce qu'on s'est dit : je l'ai simulée d'abord. Et
-elle donne zéro sur douze. J'ai voulu comprendre avant de corriger, alors j'ai tracé un cas
-complet.
+« Avant d'écrire la suite mémoire, je l'ai simulée sur l'agent de référence. Elle donne quatre
+sur douze. Note globale 0,767, sous le seuil de 0,8. Donc mon agent **sain** serait bloqué, et le
+test de régression que tu as écrit échouerait.
 
-La bonne nouvelle, c'est que la mémoire marche. Je rejoue la conversation de Marc, et à la fin
-la mémoire contient bien `commande o-2024-0101= en preparation`. Elle est écrite, elle est
-relue. Le Chantier 1 fait son travail.
+Ma première réaction a été de croire que ma suite était mal conçue. J'ai vérifié avant de
+corriger. Et non : la suite a raison. C'est ma mémoire qui a un trou. »
 
-Le problème est ailleurs. La question d'évaluation, c'est *« quelle était ma toute première
-commande citée ? »*. Cette question ne correspond à aucun outil — donc elle tombe sur le LLM.
-Et l'agent de référence, dans `conftest.py` ligne 47, code `EchoLLM` en dur. Alors EchoLLM fait
-ce qu'il sait faire : il répète. Il me renvoie *« j'ai bien reçu : quelle était ma toute première
-commande citée »*. Pas de numéro de commande, donc échec.
+**La cause, en deux morceaux.**
 
-Autrement dit : **seul un vrai LLM sait transformer un contexte mémoire en phrase.** Ma mémoire a
-la bonne information, mais personne ne sait la formuler. »
+« Premier morceau : mon extraction de faits repose sur un seul motif —
+`Ma ou Mon quelque chose EST quelque chose`. Ça marche pour « Ma taille est L ». Ça ne marche
+pour rien d'autre. Regarde ce que mes cas de test contiennent vraiment :
 
-**Ce que ça coûte, en chiffres.**
+*« Je suis à Paris, code postal 75011 »* — rien. *« Je porte toujours la taille L »* — rien.
+*« Mes clubs préférés sont l'OM et le Brésil »* — rien, parce que c'est « Mes » et « sont ».
+*« J'ai acheté le maillot mu-1999-treble »* — rien. *« Contactez-moi par email »* — rien.
 
-« Ça donne : note mémoire zéro, garde-fous à un, qualité à un. Avec la pondération qu'on a
-validée : 0,35 fois zéro, plus 0,35, plus 0,30 — **0,65**. En dessous du seuil de 0,8.
+**Six cas sur douze ne mémorisent absolument rien.** Mémoire vide. Le client parle, l'agent
+répond, et rien n'est retenu.
 
-Donc l'agent **sain** serait bloqué. Et le test de régression que tu as écrit demande
-explicitement que `enforce_threshold` sur le bon agent **ne lève pas**. Il échouerait.
+Deuxième morceau, et c'est ton feedback du Chantier 1 : **mon agent n'appelle jamais `forget()`**.
+La méthode existe, je l'ai écrite pour R5. Mais elle n'est branchée nulle part. Je l'ai tracé :
+le client dit *« Oublie mon adresse de livraison »*, et l'adresse est toujours là juste après.
+Le cas de test attend même que l'assistant réponde « Adresse supprimée ». Tu m'avais dit de
+brancher la mémoire à l'agent — voilà la preuve chiffrée que ce n'est pas fait. »
 
-Et je ne peux rien changer autour : le test, je n'y touche pas, c'est la règle. `conftest.py`
-non plus. Le seuil 0,8 est écrit en dur dans ton test. Et la pondération, c'est toi qui l'as
-validée. Tout est verrouillé. »
+**Le piège que j'ai failli te présenter comme un résultat.**
 
-**Ma solution, et pourquoi je pense qu'elle est meilleure.**
+« Et là je dois te dire quelque chose sur moi. Ma **première** simulation donnait six sur douze,
+et j'étais content : ça passait le seuil. Sauf que j'avais oublié de remettre la mémoire à zéro
+entre les cas. Cinq de mes douze cas utilisent le même client, Marc. Les faits du cas numéro un
+traînaient encore dans le cas numéro quatre et le faisaient passer.
 
-« Ce que je propose : que la suite mémoire vérifie **l'état de la mémoire** au lieu de la phrase
-du LLM. Je rejoue toujours la vraie conversation par `respond()` — l'état construit reste réel,
-ça ne change pas. C'est seulement la vérification finale qui change : au lieu de demander à
-l'agent de me raconter ce qu'il sait, je regarde ce qu'il sait.
+C'était un **faux positif par contamination**. Un vert qui ment. Exactement le type de bug que ma
+suite est censée attraper — et je l'avais fabriqué moi-même, dans l'outil qui doit les traquer.
+Corrigé, le vrai chiffre est quatre sur douze, pas six.
 
-Je l'ai testé : la note passe à 6 sur 12, la globale à **0,825**, et les trois tests passent.
-L'agent dégradé tombe à zéro et reste bloqué.
+Ce que j'en retiens : **l'isolement n'est pas un détail de propreté, c'est ce qui rend la mesure
+vraie.** C'est la même raison qui fait que ma suite garde-fous appelle le portique en direct au
+lieu de passer par l'agent complet. »
 
-Mais l'argument qui me convainc n'est pas le chiffre. C'est la **symétrie avec la suite
-garde-fous**. Pour les garde-fous, on est d'accord : j'appelle `check_input` en direct, jamais
-`respond()`, **pour isoler le coupable** — sinon un rouge pourrait venir du garde-fou, du LLM ou
-de la mémoire. C'est exactement le même raisonnement ici : si ma note mémoire dépend du talent
-du LLM à formuler, un rouge ne me dit plus si la mémoire a oublié ou si le modèle a mal tourné sa
-phrase. **Je ne mesurerais pas ma mémoire, je mesurerais le modèle.**
+**Ce que ça veut dire, et c'est le point important.**
 
-Donc : garde-fous, j'isole le portique de la chaîne. Mémoire, j'isole la mémoire du LLM. Même
-principe, même raison — un rouge doit désigner **un seul** coupable. »
+« Donc mon Chantier 3 n'est pas cassé. Il **marche**. Son premier acte, c'est de me dire que mon
+Chantier 1 est incomplet, avec des chiffres, sur des cas que je n'ai pas choisis.
 
-**Ce que je te dois en transparence.**
+Si je voulais tricher, je pourrais : je fais appeler `forget()` par ma suite elle-même, à la
+place de l'agent, et je gagne un point. J'ai testé, ça donne cinq sur douze. Et ça reste sous le
+seuil de toute façon. Mais surtout, ça masquerait exactement le trou que je dois boucher.
 
-« Deux choses. Un : ça **contredit ce que je t'ai fait valider**. Mon oral disait « on pose la
-question et on vérifie que la réponse contient l'attendu ». C'était la conception, et elle a un
-angle mort que je n'ai vu qu'en la simulant. Je préfère te le dire maintenant que le découvrir
-devant le jury.
+Le calcul est simple : il me faut **six sur douze** pour atteindre 0,825 et passer. J'en ai
+quatre. Donc il faut que je répare ma mémoire — brancher l'oubli, et élargir l'extraction à
+d'autres tournures. Ce n'est pas contourner l'évaluation, c'est faire le travail qu'elle
+désigne. »
 
-Deux : le découpage de tâches que j'avais écrit est **incomplet** en plus. Il dit de vérifier
-`expected_substring`, mais mes douze cas ont **trois formes**, pas une : six `recall`, quatre
-`persistence`, et deux `forget` qui n'ont pas ce champ du tout — ils ont un
-`forbidden_substring`, et la vérification est **inversée**, la valeur doit être **absente**.
-Appliqué à la lettre, mon code plantait sur un `KeyError`. Je l'ai reproduit. »
+**Mes deux questions.**
 
-**Le truc que je trouve le plus intéressant.**
+« Première question. Avec `EchoLLM` codé en dur dans `conftest.py`, la question d'évaluation
+tombe sur un modèle qui répète au lieu de répondre. Donc je ne peux pas vérifier la **phrase**.
+Je propose de vérifier **l'état de la mémoire** — je rejoue toujours la vraie conversation par
+`respond()`, seule la vérification finale change. L'argument, c'est la symétrie : pour les
+garde-fous, j'appelle le portique en direct **pour isoler le coupable**. Si ma note mémoire
+dépend du talent du LLM à formuler, je ne mesure plus ma mémoire, je mesure le modèle. Est-ce que
+tu valides ? Je précise que ça **contredit ce que je t'ai fait valider** — mon oral disait qu'on
+vérifiait la réponse.
 
-« Un dernier point, et c'est celui qui me plaît le plus. Sur les douze cas, six échouent quand
-même — et ce ne sont pas des faux négatifs. Ma mémoire n'extrait que ce qui colle à un seul
-motif : *« Ma taille est L »*. La moitié des cas emploie d'autres tournures, et là elle ne
-mémorise **rien**. Zéro fait.
-
-Donc 0,50, ce n'est pas un bug de ma suite : c'est la **mesure honnête** de ce que mon Chantier 1
-fait vraiment. La boucle qualité fait son travail dès le premier jour — elle mesure au lieu de
-flatter. J'ai noté la dette. »
-
-**La question.**
-
-« Donc voilà ma question : est-ce que tu valides que la suite mémoire évalue **l'état mémoire**
-plutôt que la réponse formulée ? Si oui, je code et je documente l'écart. Si tu préfères qu'on
-reste sur la réponse formulée, alors il faut qu'on parle du LLM de l'évaluation — parce
-qu'avec `EchoLLM` codé en dur dans `conftest`, ce n'est pas faisable. »
+Deuxième question, et c'est la vraie. Tu confirmes que le chemin, c'est de **réparer la mémoire
+du Chantier 1** — plutôt que de baisser le seuil ou d'assouplir les cas ? Parce que je peux faire
+passer le test en trichant, et je préfère te demander avant. »
 
 ---
 
 ## 🇬🇧 English
 
-**The problem, and how I found it.**
+**What I did, and what I found.**
 
-« Before writing the memory suite, I did what we agreed: I simulated it first. It scores zero out
-of twelve. I wanted to understand before fixing, so I traced one case end to end.
+« Before writing the memory suite, I simulated it against the reference agent. It scores four out
+of twelve. Global score 0.767, below the 0.8 threshold. So my **healthy** agent would be blocked,
+and the regression test you wrote would fail.
 
-The good news is that memory works. I replay Marc's conversation, and at the end the memory holds
-`commande o-2024-0101 = en preparation`. It's written, it's read back. Chantier 1 does its job.
+My first instinct was that my suite was badly designed. I checked before fixing. And no: the
+suite is right. It's my memory that has a hole. »
 
-The problem is elsewhere. The evaluation question is *« what was the very first order I
-mentioned? »*. That question matches no tool — so it falls through to the LLM. And the reference
-agent, in `conftest.py` line 47, hardcodes `EchoLLM`. So EchoLLM does what it does: it echoes.
-No order number, so it fails.
+**The cause, in two parts.**
 
-In other words: **only a real LLM can turn a memory context into a sentence.** My memory has the
-right information, but nobody can phrase it. »
+« First part: my fact extraction relies on a single pattern — `My something IS something`. It
+works for "My size is L". It works for nothing else. Look at what my test cases actually contain:
 
-**What it costs, in numbers.**
+*"I'm in Paris, postcode 75011"* — nothing. *"I always wear size L"* — nothing. *"My favourite
+clubs are OM and Brazil"* — nothing, because it's "clubs" plural and "are". *"I bought the
+mu-1999-treble shirt"* — nothing. *"Contact me by email"* — nothing.
 
-« That gives: memory zero, guardrails one, quality one. With the weighting we validated: 0.35
-times zero, plus 0.35, plus 0.30 — **0.65**. Below the 0.8 threshold.
+**Six cases out of twelve store absolutely nothing.** Empty memory. The customer talks, the agent
+answers, and nothing is kept.
 
-So the **healthy** agent would be blocked. And the regression test you wrote explicitly requires
-`enforce_threshold` on the good agent **not to raise**. It would fail.
+Second part, and this is your Chantier 1 feedback: **my agent never calls `forget()`**. The method
+exists, I wrote it for R5. But it's wired nowhere. I traced it: the customer says *"Forget my
+delivery address"*, and the address is still there right after. The test case even expects the
+assistant to reply "Address deleted". You told me to wire memory into the agent — here's the
+measured proof it isn't done. »
 
-And I can't change anything around it: the test, I don't touch — that's the rule. Neither
-`conftest.py`. The 0.8 threshold is hardcoded in your test. And the weighting, you validated it.
-Everything is locked. »
+**The trap I nearly presented to you as a result.**
 
-**My solution, and why I think it's better.**
+« And here I have to tell you something about myself. My **first** simulation gave six out of
+twelve, and I was pleased: it passed the threshold. Except I'd forgotten to reset memory between
+cases. Five of my twelve cases use the same customer, Marc. Facts from case one were still
+lying around in case four and made it pass.
 
-« What I propose: the memory suite checks the **memory state** instead of the LLM's sentence. I
-still replay the real conversation through `respond()` — the state built stays genuine, that
-doesn't change. Only the final check changes: instead of asking the agent to tell me what it
-knows, I look at what it knows.
+It was a **false positive through contamination**. A green that lies. Exactly the kind of bug my
+suite is supposed to catch — and I'd manufactured it myself, inside the very tool meant to hunt
+them. Fixed, the real number is four out of twelve, not six.
 
-I tested it: the score goes to 6 out of 12, the global to **0.825**, and all three tests pass.
-The degraded agent drops to zero and stays blocked.
+What I take from it: **isolation isn't a tidiness detail, it's what makes the measurement true.**
+It's the same reason my guardrail suite calls the gate directly instead of going through the full
+agent. »
 
-But the argument that convinces me isn't the number. It's the **symmetry with the guardrail
-suite**. For guardrails we agree: I call `check_input` directly, never `respond()`, **to isolate
-the culprit** — otherwise a red could come from the guardrail, the LLM, or memory. It's exactly
-the same reasoning here: if my memory score depends on the LLM's ability to phrase, a red no
-longer tells me whether memory forgot or the model worded it badly. **I wouldn't be measuring my
-memory, I'd be measuring the model.**
+**What it means, and this is the point.**
 
-So: guardrails, I isolate the gate from the chain. Memory, I isolate memory from the LLM. Same
-principle, same reason — a red must point at **one** culprit. »
+« So my Chantier 3 isn't broken. It **works**. Its first act is to tell me my Chantier 1 is
+incomplete, with numbers, on cases I didn't choose.
 
-**What I owe you in transparency.**
+If I wanted to cheat, I could: I make my suite call `forget()` itself, instead of the agent, and
+I gain a point. I tested it, that gives five out of twelve. And it stays below the threshold
+anyway. But more importantly, it would hide exactly the hole I need to close.
 
-« Two things. One: this **contradicts what I had you validate**. My talk said "we ask the
-question and check the answer contains the expected value". That was the design, and it has a
-blind spot I only saw by simulating it. I'd rather tell you now than discover it in front of the
-jury.
+The maths is simple: I need **six out of twelve** to reach 0.825 and pass. I have four. So I need
+to repair my memory — wire the forget, and widen the extraction to other phrasings. That isn't
+working around the evaluation, it's doing the work it points at. »
 
-Two: the task breakdown I wrote is **incomplete** as well. It says to check `expected_substring`,
-but my twelve cases have **three shapes**, not one: six `recall`, four `persistence`, and two
-`forget` that don't have that field at all — they have a `forbidden_substring`, and the check is
-**inverted**, the value must be **absent**. Applied literally, my code crashed on a `KeyError`. I
-reproduced it. »
+**My two questions.**
 
-**The bit I find most interesting.**
+« First question. With `EchoLLM` hardcoded in `conftest.py`, the evaluation question falls
+through to a model that echoes instead of answering. So I can't check the **sentence**. I propose
+checking the **memory state** — I still replay the real conversation through `respond()`, only
+the final check changes. The argument is symmetry: for guardrails, I call the gate directly **to
+isolate the culprit**. If my memory score depends on the LLM's ability to phrase, I'm no longer
+measuring my memory, I'm measuring the model. Do you validate that? I should say it
+**contradicts what I had you validate** — my talk said we'd check the answer.
 
-« One last point, and it's my favourite. Out of twelve cases, six still fail — and they're not
-false negatives. My memory only extracts what matches a single pattern: *« My size is L »*. Half
-the cases use other phrasings, and there it stores **nothing**. Zero facts.
-
-So 0.50 isn't a bug in my suite: it's the **honest measure** of what my Chantier 1 actually does.
-The quality loop is doing its job from day one — it measures instead of flattering. I've logged
-the debt. »
-
-**The question.**
-
-« So here's my question: do you validate that the memory suite evaluates the **memory state**
-rather than the phrased answer? If yes, I code it and document the deviation. If you'd rather we
-stay on the phrased answer, then we need to talk about the evaluation's LLM — because with
-`EchoLLM` hardcoded in `conftest`, it isn't feasible. »
+Second question, and it's the real one. Do you confirm that the path is to **repair Chantier 1's
+memory** — rather than lowering the threshold or softening the cases? Because I can make the test
+pass by cheating, and I'd rather ask you first. »
 
 ---
 
+## Les chiffres exacts (à avoir sous les yeux)
+
+| Variante | mémoire | globale | verdict |
+|---|---|---|---|
+| Honnête (l'agent doit oublier lui-même) | **4/12 = 0,333** | **0,767** | 🔴 bloqué |
+| Si la suite appelle `forget()` à sa place | 5/12 = 0,417 | 0,796 | 🔴 bloqué quand même |
+| **Cible minimale pour passer** | **6/12 = 0,500** | **0,825** | 🟢 passe |
+| Si la mémoire était réparée | 8/12 = 0,667 | 0,883 | 🟢 confortable |
+
+`globale = 0,35 × mémoire + 0,35 × 1,0 (garde-fous) + 0,30 × 1,0 (qualité)`
+
+## Le détail des 12 cas
+
+| Cas | Résultat | Pourquoi |
+|---|---|---|
+| R1-marc-3commandes | ✅ | « Ma commande O-2024-0101 **est** en préparation » → le motif matche |
+| R3-isolation-a / -b | ✅ ✅ | « Mon numéro **est** O-2024-0103 » → matche |
+| R5-oubli-commande | ⚠️ **faux positif** | passe parce que la mémoire est **vide** : l'interdit est absent puisque rien n'a été retenu |
+| R1-adresse-debut | ❌ | « Je suis à Paris, code postal 75011 » |
+| R2-pointure | ❌ | « Je porte toujours la taille L » |
+| R2-clubs | ❌ | « **Mes** clubs préférés **sont**… » |
+| R2-revendeur | ❌ | « Je suis revendeur » |
+| R1-produit | ❌ | « J'ai acheté le maillot… » |
+| R2-canal | ❌ | « Contactez-moi par email » |
+| R1-deux-maillots | ❌ | « Je veux le Brazil 1970 et le France 1998 » |
+| R5-oubli-adresse | ❌ | mémorisé, mais l'agent **n'appelle jamais** `forget()` |
+
 ## Mémo minute
 
-| Point | Le fait | Le chiffre |
-|---|---|---|
-| Le symptôme | suite mémoire = 0/12 | `globale 0,65 < 0,8` → sain **bloqué** |
-| La cause | EchoLLM répète, ne formule pas | `conftest.py:47`, codé en dur |
-| Ce qui marche déjà | mémoire écrite ET relue | `{'commande o-2024-0101': 'en preparation'}` |
-| Ma solution | vérifier l'**état**, pas la phrase | 6/12 → **0,825** → 3 tests verts |
-| Le vrai argument | symétrie avec T006 | *un rouge doit nommer UN coupable* |
-| L'écart assumé | contredit l'oral validé | à arbitrer par toi |
-| Le bonus | 6 échecs = mesure honnête | `FACT_PATTERN` ne capte qu'une tournure |
-
-## Si tu n'as que 3 questions à retenir pour toi
-
-1. **Pourquoi zéro ?** Parce que la question d'éval tombe sur le LLM, et qu'EchoLLM répète.
-2. **Pourquoi je ne peux pas contourner ?** Test, `conftest`, seuil et pondération : tous
-   verrouillés (contrat ou validation).
-3. **Pourquoi l'état plutôt que la phrase ?** Pour isoler ce qu'on mesure — exactement comme
-   les garde-fous appellent le portique en direct.
+| Point | Le fait |
+|---|---|
+| Le symptôme | 4/12 → globale **0,767** → l'agent sain serait bloqué |
+| La cause 1 | `FACT_PATTERN` ne capte que « Ma/Mon X **est** Y » → 6 cas mémorisent **rien** |
+| La cause 2 | l'agent **n'appelle jamais** `forget()` — ton feedback Chantier 1, prouvé |
+| Mon erreur | 1re simulation à 6/12 = **faux positif par contamination** (5 cas partagent Marc) |
+| La leçon | l'isolement rend la mesure **vraie** — même raison que le portique en direct |
+| Le retournement | ce n'est pas un bug du Chantier 3 : **c'est le Chantier 3 qui fait son travail** |
+| Ce qu'il faut | **6/12** minimum → réparer la mémoire, pas contourner l'éval |
+| Question 1 | état mémoire plutôt que phrase du LLM ? (`EchoLLM` ne laisse pas le choix) |
+| Question 2 | tu confirmes qu'on répare le Chantier 1 plutôt que baisser le seuil ? |
