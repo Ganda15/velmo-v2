@@ -442,6 +442,42 @@ Conception figée dans `docs/chantier3/T004-conception-cases.md` (4 raisons de l
 sur disque : `parents[3]` réellement présent, numéros de ligne testés en cassant un `.jsonl`
 exprès, 4 `raise` présents, 3 tests toujours rouges pour la même raison.
 
+### ✅ T004 TERMINÉ ET CONTRE-VÉRIFIÉ (2026-07-16)
+`src/velmo/mlops/cases.py` + `suites/__init__.py` (vide). Écrit par la session VS Code sur
+l'instruction, contre-vérifié sur disque par la session principale.
+
+**Preuves (mesurées, pas affirmées) :**
+- Vert : `12 35 8`. `EVAL_DIR` → `…\Velmo-2.2\eval` : **`parents[3]` correct**, le piège
+  `parents[2]` (copié de `kb_store.py:14`) est évité.
+- 🎯 **Le test des numéros de ligne passe** : fichier fabriqué avec une **ligne vide en 3** et
+  un **JSON cassé en 5** → `lignes.jsonl:5` annoncé. La **vraie** ligne. Le bug de Velmo-3
+  (filtrer les vides AVANT `enumerate` → numéros décalés) est évité : le code énumère le
+  fichier brut et saute dans la boucle.
+- Les **4 raisons** lèvent bien : manquant · vide · JSON invalide (`casse.jsonl:2`) · id
+  dupliqué (`dup.jsonl:3 — id duplique : 'a' (deja vu ligne 1)`).
+- **Deux bonus non demandés** : (1) un fichier ne contenant que des lignes vides est refusé —
+  le test de vacuité porte sur `cases` APRÈS la boucle, pas sur le texte brut ; (2) le message
+  de doublon donne **les deux lignes**, pas seulement l'id. Esprit exact de la Question 3 :
+  dire OÙ, pas seulement QUOI.
+- 3 rouges inchangés, même `NotImplementedError: run_eval` · `tests/` intact (0 fichier
+  touché) · ruff propre.
+- **mypy : 5 erreurs sur `cases.py`, mais 67 sur tout `src/` (18 fichiers)**, dont ceux du
+  formateur — `versioning.py` porte la même (`dict` sans paramètres sous `strict = true`).
+  `make typecheck` était **déjà rouge avant T004** : pas une régression, à traiter globalement
+  ou pas du tout.
+
+**🟠 Deux trous sondés au-delà du contrat (dette identifiée, pas corrigée) :**
+1. **Ligne JSON valide mais non-objet** (ex. `42`) → `case.get("id")` lève **`AttributeError`,
+   pas `EvalDataError`**, et sans dire fichier ni ligne. Le fail-closed tient (rien ne passe),
+   mais ça compte pour **T014** : on a prévu d'attraper `EvalDataError` → exit 2 (`INVALID`,
+   idée de Velmo-3). Cette exception s'échapperait et serait **confondue avec une régression**
+   — exactement la distinction qu'on voulait installer.
+2. **Cas sans champ `id`** → deux cas valent `None` → message « id duplique : None ». Le vrai
+   problème est *id manquant*, pas *dupliqué* : **un message qui ment**. Et un cas isolé sans
+   `id` passe en silence.
+
+**Prochaine : T005 · T006 · T007** — les 3 suites, indépendantes, parallélisables.
+
 ---
 
 ## ⏭️ À FAIRE
