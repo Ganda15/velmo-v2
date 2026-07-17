@@ -667,8 +667,10 @@ Claude donne code + explication dans le chat, application seulement sur « do it
   (le `serious_leak` n'est pas dans `Scores`). Détail dans la section FAIT.
 - ✅ **T013 (`write_report`) — FAIT. 🟢 LES 3 TESTS SONT VERTS : 19 passed, 0 failed**
   (2026-07-17, `b9ba635`). FR-012 prouvé par écrasement réel. Détail section FAIT.
-- ⏭️ **RESTE** : T011 (`build_eval_agent`) · T014 (`score.py`, CLI) · T015 (gate `quality.yml`)
-  · T016→T018 (preuves finales). Plus les dettes ouvertes ci-dessous.
+- ✅ **T011 (`build_eval_agent`) — FAIT (2026-07-17, `14114e5`)**. Isolation Postgres PROUVÉE
+  (Postgres tournait, 0 connexion ouverte). Levier `--live` prouvé. Détail section FAIT.
+- ⏭️ **RESTE** : T014 (`score.py` + drapeau `--live`) · T015 (⚡ gate `quality.yml` : la note
+  passe d'opinion à pouvoir) · T016→T018 (preuves finales). Plus les dettes ci-dessous.
 - ✅ **T010 (`enforce_threshold`) — FAIT, 2ᵉ test VERT (2026-07-17, `5c993d6`)**. `<` strict :
   pile au seuil, ça passe. ⚠️ **Dette : le piège flottant** (32 combos/75 bloquées à tort).
 - ✅ **T009 (câblage) — FAIT, 1er test VERT (2026-07-17, `ba96c83`)**. Détail dans la section FAIT.
@@ -768,6 +770,69 @@ inexplicable : *« ma note affiche 0,8, mon seuil est 0,8, et ça bloque »*.
 arbitrage serait pire que la dette. **C'est une décision de conception, pas un détail de code.**
 Piste si le formateur valide : comparer sur la grille du snap (entiers de 0,02) plutôt qu'en
 flottant, ou `math.isclose`. **À porter avec les 2 autres questions.**
+
+### ✅ T011 — `build_eval_agent()` (2026-07-17, `14114e5`) · l'agent propre à la CLI
+Jumeau de `conftest.build_reference_agent()`, avec **UNE** différence : `llm=get_llm()` au lieu
+d'`EchoLLM()` en dur. Les **tests** forcent EchoLLM pour le **déterminisme** ; la **CLI** doit
+pouvoir tourner contre le **modèle imposé**. Aucun test ne touche ce fichier → **19 passed**
+inchangé. **T011 se prouve à la main, pas par un test.**
+- **Interdit respecté** : **0 import depuis `tests/`**. `src/` ne peut pas dépendre de l'arbre
+  de tests — ça casserait un `pip install` / build de wheel qui n'embarque pas `tests/`. Les 5
+  lignes de seedage sont **dupliquées**, pas réutilisées. Prix assumé (`research.md §6`).
+- 🎯 **PROUVÉ — l'isolation de Postgres est STRUCTURELLE** : Postgres **tournait** (port 5434)
+  pendant le test. Connexions clientes **AVANT** un `run_eval` complet (186 appels) : **1**.
+  **APRÈS : 1.** Aucune connexion ouverte. Parce que `fresh_sqlite_session()` fait
+  `create_engine("sqlite://")` **EN DUR** et ne lit **jamais** `DB_URL`. La constitution
+  (*« evaluation MUST run using SQLite only, no Docker »*) est respectée **par impossibilité,
+  pas par promesse**. Argument d'oral fort.
+- 🎯 **PROUVÉ — le levier du `--live`** : `sans .env → EchoLLM` · `avec .env → AzureLLM
+  (gpt-5.4)`. **Un seul `build_eval_agent()`, deux comportements selon l'appelant.** T014
+  n'aura **rien à dupliquer** : `load_dotenv()` ou pas, c'est tout. Pas de `load_dotenv()`
+  dans ce module — *il construit, il ne configure pas.*
+- ⚠️ **À savoir** : `build_eval_agent()` ne donne **PAS** une mémoire neuve. La base mémoire est
+  au niveau **module** (`store.py`, StaticPool) → un `MemoryManager()` neuf voit tout ce qui a
+  été écrit avant dans le même process. **Voulu** (R2 persistance) et **sans effet pour la CLI**
+  (process neuf à chaque run). Mais **le nom ment un peu** : deux appels dans le même process
+  ne donnent pas deux agents indépendants.
+
+### 🔬 LA VRAIE STACK vs HORS-LIGNE — mesuré (2026-07-17) · décision d'Era
+Era veut **pratiquer tous les outils dans Velmo-2.2** (terrain d'entraînement ; le fil rouge
+viendra après et séparément). Mesures faites **avant** de décider, Docker relancé pour l'occasion :
+```
+hors-ligne (EchoLLM + SQLite + LocalKB)   -> globale 0.825    0,4 s
+VRAIE STACK (gpt-5.4 + Postgres + Chroma) -> globale 0.825   20,4 s   (50x plus lent)
+```
+🔴 **ET LA DÉCOUVERTE MAJEURE — l'évaluation est AVEUGLE au LLM.** Testé avec un modèle qui
+répond *« bla bla bla je ne sais pas »* à tout :
+```
+EchoLLM normal      : memoire 0.500 · garde-fous 1.000 · qualite 1.000 -> 0.825
+LLM CATASTROPHIQUE  : memoire 0.500 · garde-fous 1.000 · qualite 1.000 -> 0.825   IDENTIQUE
+```
+**Pourquoi c'est logique, pas un bug** : mémoire → `read().facts` (c'est `FACT_PATTERN` qui
+écrit, pas le modèle) · garde-fous → **regex** · qualité → **outils + FAQ**. Les 3 piliers que
+le brief impose **ne dépendent structurellement pas du modèle**.
+**Appels LLM réels mesurés** : 9/tour (tous dans la suite mémoire), **27 sur 3 tours** — contre
+**186** comptés par `aggregate()`.
+**Argument d'oral** (ne PAS cacher, c'est une découverte) : *« je peux remplacer gpt-5.4 par un
+modèle qui dit n'importe quoi, ma note ne bouge pas — parce que mes 3 piliers ne dépendent pas
+du modèle. C'est exactement pour ça que mon éval tourne en 1 seconde sans secret. Mesurer le
+LLM demanderait une 4ᵉ suite et un juge LLM. »*
+**DÉCISION** : `score.py` par défaut **hors-ligne** (la CI n'a ni Docker ni clé Azure → sans ça,
+T015 et le critère C13 seraient indémontrables) **+ un drapeau `--live`** (Postgres + Chroma +
+gpt-5.4 + LangSmith via `build_default_agent()`) pour la **pratique et la démo**. Deux besoins
+légitimes et différents : *l'un montre le produit, l'autre le prouve.*
+
+### 🔴 BUG TROUVÉ DANS T008 (déjà commité) — le coût surfacture d'un facteur 7
+`research.md §5` dit `cost = num_LLM_calls × EVAL_COST_PER_CALL`. **T008 compte TOUS les appels**
+(`respond` + `check_input` + `check_output` = 186), alors que **seuls 27 touchent le modèle** :
+les garde-fous sont du **regex** (0 appel LLM) et la qualité vient des **outils/FAQ** (0 appel).
+Avec `EVAL_COST_PER_CALL=0.002` : le rapport annoncerait **0,37 €** au lieu de **0,054 €**.
+**Pourquoi personne ne l'a vu** : `EVAL_COST_PER_CALL` n'est pas configuré → `cost = 186 × 0.0
+= 0.0`. **Le zéro masquait l'erreur** — la dette du « zéro inventé » cachait un vrai bug de
+calcul. Corollaire : `latency_ms` (2,08 ms) est **effondrée** par 159 appels regex quasi
+instantanés — elle ne reflète pas le coût réel d'un tour d'agent.
+**Correctif** : compter au niveau de `agent.llm.invoke`, pas de `respond`. **En attente
+d'arbitrage d'Era** (écart au contrat dans un fichier déjà validé).
 
 ### 🟢🟢🟢 T013 — LES 3 TESTS SONT VERTS · **19 passed, 0 failed** (2026-07-17, `b9ba635`)
 ```
