@@ -582,6 +582,39 @@ boucher, et ça ne suffirait même pas.
 Argument central : *symétrie avec T006 — un rouge doit nommer UN coupable*. **T005 est en
 attente de son arbitrage.**
 
+### 🔴→🟢 CHANTIER 1 RÉPARÉ sous le contrôle de la boucle qualité (2026-07-16, soir)
+**Décision d'Era** : plutôt que d'adapter l'évaluation au bug, on répare ce qu'elle désigne.
+C'est le sens même de la boucle : mesurer → désigner → corriger → re-mesurer.
+**Trois correctifs (commit `e3bb30c`), chacun trouvé par la simulation AVANT d'écrire T005 :**
+1. **`FACT_PATTERN` élargi au pluriel** (`memory/__init__.py`) : « Ma/Mon X est Y » →
+   « Ma/Mon/**Mes** X **est/sont** Y ». « Mes clubs préférés sont l'OM » ne mémorisait RIEN.
+   Règle : on **généralise le motif existant**, on n'ajoute PAS une regex par cas de test —
+   sinon on triche (on coderait le test, pas la mémoire).
+2. **Extraction de la cible d'oubli** (`agent.py`) : la ponctuation est retirée AVANT le filtre
+   des mots vides. « plait. » ≠ « plait » → la cible devenait « adresse livraison plait »,
+   que `forget()` ne retrouvait jamais. ⚠️ Correction d'une erreur de MA part au passage :
+   j'avais écrit « l'agent n'appelle jamais forget() » — FAUX, la route existe
+   (`agent.py:114`) ; le bug était dans la cible qu'elle fabrique. Vérifier avant d'affirmer.
+3. **`forget()` en correspondance mot à mot OR** (`any`, pas sous-chaîne ni `all`) : le client
+   dit « oublie mon adresse de livraison » quand la clé stockée est « adresse » — il nomme la
+   chose PLUS précisément que ce qui est stocké. Essai intermédiaire avec `all()` : R5 encore
+   raté, 5/12 = globale 0,796, **bloqué à 0,004 près**. Décision assumée (argument d'oral) :
+   **droit à l'oubli R5/RGPD → dans le doute, SUR-supprimer est le sens sûr** — rater une
+   suppression est la faute, pas l'inverse. Même logique fail-closed que partout, appliquée à
+   la vie privée.
+**Mesures (simulation honnête, agent NEUF par cas)** : 4/12 (globale 0,767, bloqué) → 5/12
+(0,796, bloqué) → **6/12 = 0,500 → globale 0,825 → PASSE**. Contrat intact : `test_memory.py`
+4 passed à chaque étape, suite complète toujours `3 failed, 16 passed` (stubs `run_eval`).
+**Les 6 cas restants échouent pour une raison honnête** : tournures structurellement
+différentes (« Je porte toujours la taille L », « code postal 75011 », « J'ai acheté le
+maillot mu-1999-treble »). Hors de portée d'une regex — c'est le travail d'un extracteur LLM
+ou de la couche épisodique (dette Chroma du Chantier 1). **0,500 est la vraie note de la
+mémoire actuelle, et elle suffit à passer parce que le reste de l'agent est solide.**
+**Trace de bout en bout qui prouve l'oubli** : « Mon adresse de livraison est 12 rue des
+Lilas » → mémorisé → « Oublie mon adresse de livraison s'il te plait » → « C'est noté, j'ai
+oublié… (1 information supprimée) » → mémoire vide. Avant : « Je n'ai rien concernant
+"adresse livraison plait" ».
+
 ---
 
 ## ⏭️ À FAIRE
