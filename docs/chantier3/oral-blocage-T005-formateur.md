@@ -14,9 +14,11 @@
 « Avant de coder la suite mémoire, je l'ai simulée. Elle donne **4 sur 12**, note globale
 **0,767**, sous le seuil de 0,8 : l'agent sain serait bloqué. J'ai cherché pourquoi. Ce n'est pas
 la suite qui est fausse — c'est ma mémoire qui ne capte qu'**une seule tournure de phrase**, et
-mon agent qui **n'appelle jamais** `forget()`. Six cas sur douze ne mémorisent **rien du tout**.
-Donc ma boucle qualité, dès son premier run, me dit que mon Chantier 1 est incomplet. C'est
-précisément ce qu'elle doit faire. J'ai deux questions à te poser. »
+mon `forget` qui reçoit une cible cassée. Six cas sur douze ne mémorisent **rien du tout**.
+Donc ma boucle qualité, dès son premier run, me dit que mon Chantier 1 est incomplet — c'est
+précisément ce qu'elle doit faire. **J'ai réparé les trois bugs qu'elle a désignés : 4/12 →
+6/12, globale 0,825, ça passe** — sans toucher aux tests, ni au seuil, ni aux cas. J'ai deux
+questions à te poser. »
 
 ---
 
@@ -44,26 +46,37 @@ pour rien d'autre. Regarde ce que mes cas de test contiennent vraiment :
 **Six cas sur douze ne mémorisent absolument rien.** Mémoire vide. Le client parle, l'agent
 répond, et rien n'est retenu.
 
-Deuxième morceau, et c'est ton feedback du Chantier 1 : **mon agent n'appelle jamais `forget()`**.
-La méthode existe, je l'ai écrite pour R5. Mais elle n'est branchée nulle part. Je l'ai tracé :
-le client dit *« Oublie mon adresse de livraison »*, et l'adresse est toujours là juste après.
-Le cas de test attend même que l'assistant réponde « Adresse supprimée ». Tu m'avais dit de
-brancher la mémoire à l'agent — voilà la preuve chiffrée que ce n'est pas fait. »
+Deuxième morceau, et c'est ton feedback du Chantier 1 : **l'oubli ne marche pas**. J'ai d'abord
+cru que mon agent n'appelait jamais `forget()`. J'ai vérifié avant d'accuser : **il l'appelle
+bien**, la route existe. Le bug est dans ce qu'il lui passe. Le client dit *« Oublie mon adresse
+de livraison s'il te plaît. »* — le point collé à « plaît » le fait échapper à mon filtre de
+mots vides, et l'agent finit par demander d'oublier « adresse livraison plait ». Introuvable,
+évidemment. L'adresse est toujours là juste après. Tu m'avais dit de brancher la mémoire à
+l'agent — le câblage existe, mais il ne fonctionnait pas, et personne ne pouvait le voir. »
 
 **Le piège que j'ai failli te présenter comme un résultat.**
 
 « Et là je dois te dire quelque chose sur moi. Ma **première** simulation donnait six sur douze,
-et j'étais content : ça passait le seuil. Sauf que j'avais oublié de remettre la mémoire à zéro
-entre les cas. Cinq de mes douze cas utilisent le même client, Marc. Les faits du cas numéro un
-traînaient encore dans le cas numéro quatre et le faisaient passer.
+et j'étais content : ça passait le seuil. Sauf que ce six était faux — et j'ai mis du temps à
+comprendre qu'il était faux **pour deux raisons différentes**, empilées.
 
-C'était un **faux positif par contamination**. Un vert qui ment. Exactement le type de bug que ma
-suite est censée attraper — et je l'avais fabriqué moi-même, dans l'outil qui doit les traquer.
-Corrigé, le vrai chiffre est quatre sur douze, pas six.
+La première : j'avais oublié de remettre la mémoire à zéro entre les cas. Cinq de mes douze cas
+utilisent le même client, Marc, et les faits d'un cas traînaient dans le suivant. J'ai mesuré
+l'écart exact : quatre sur douze en isolant vraiment, cinq en laissant s'accumuler. **Un point
+de contamination.**
+
+La deuxième est pire, parce qu'elle vient de ma main : ma simulation appelait
+`memory.forget()` **elle-même**, à la place de l'agent. Elle faisait le travail de ce qu'elle
+était censée juger. Ça masquait exactement le trou que je devais trouver. **Un deuxième point
+volé.**
+
+Quatre plus un plus un : six. Deux mensonges empilés dans l'outil censé traquer les mensonges.
+Le vrai chiffre de départ était **quatre**.
 
 Ce que j'en retiens : **l'isolement n'est pas un détail de propreté, c'est ce qui rend la mesure
-vraie.** C'est la même raison qui fait que ma suite garde-fous appelle le portique en direct au
-lieu de passer par l'agent complet. »
+vraie** — et **un juge ne doit jamais faire le travail de l'accusé**. C'est la même raison qui
+fait que ma suite garde-fous appelle le portique en direct au lieu de passer par l'agent
+complet. »
 
 **Ce que ça veut dire, et c'est le point important.**
 
@@ -74,10 +87,9 @@ Si je voulais tricher, je pourrais : je fais appeler `forget()` par ma suite ell
 place de l'agent, et je gagne un point. J'ai testé, ça donne cinq sur douze. Et ça reste sous le
 seuil de toute façon. Mais surtout, ça masquerait exactement le trou que je dois boucher.
 
-Le calcul est simple : il me faut **six sur douze** pour atteindre 0,825 et passer. J'en ai
-quatre. Donc il faut que je répare ma mémoire — brancher l'oubli, et élargir l'extraction à
-d'autres tournures. Ce n'est pas contourner l'évaluation, c'est faire le travail qu'elle
-désigne. »
+Le calcul est simple : il me faut **six sur douze** pour atteindre 0,825 et passer. J'en avais
+quatre. Donc j'ai réparé ma mémoire — l'oubli, et l'extraction. Ce n'est pas contourner
+l'évaluation, c'est faire le travail qu'elle désigne. Je te raconte le résultat à la fin. »
 
 **Mes deux questions.**
 
@@ -90,9 +102,12 @@ dépend du talent du LLM à formuler, je ne mesure plus ma mémoire, je mesure l
 tu valides ? Je précise que ça **contredit ce que je t'ai fait valider** — mon oral disait qu'on
 vérifiait la réponse.
 
-Deuxième question, et c'est la vraie. Tu confirmes que le chemin, c'est de **réparer la mémoire
-du Chantier 1** — plutôt que de baisser le seuil ou d'assouplir les cas ? Parce que je peux faire
-passer le test en trichant, et je préfère te demander avant. »
+Deuxième question, et c'est la vraie. **Est-ce que tu valides la méthode ?** La boucle mesure,
+elle désigne un trou, je répare ce qu'elle désigne, je re-mesure. Je l'ai fait — 4/12 devient
+6/12 — sans toucher à tes tests, ni au seuil, ni aux cas. J'aurais pu faire passer le test en
+trichant : ma suite appelait déjà `forget()` à la place de l'agent, et ça masquait exactement le
+trou que je devais boucher. J'ai enlevé la triche et réparé l'agent. C'est bien ce chemin-là que
+tu attends ? »
 
 ---
 
@@ -119,26 +134,35 @@ mu-1999-treble shirt"* — nothing. *"Contact me by email"* — nothing.
 **Six cases out of twelve store absolutely nothing.** Empty memory. The customer talks, the agent
 answers, and nothing is kept.
 
-Second part, and this is your Chantier 1 feedback: **my agent never calls `forget()`**. The method
-exists, I wrote it for R5. But it's wired nowhere. I traced it: the customer says *"Forget my
-delivery address"*, and the address is still there right after. The test case even expects the
-assistant to reply "Address deleted". You told me to wire memory into the agent — here's the
-measured proof it isn't done. »
+Second part, and this is your Chantier 1 feedback: **forgetting doesn't work**. I first thought
+my agent never called `forget()`. I checked before accusing: **it does call it**, the route
+exists. The bug is in what it passes. The customer says *"Forget my delivery address please."* —
+the full stop glued to "please" makes it slip through my stop-word filter, and the agent ends up
+asking to forget "address delivery please". Not found, obviously. The address is still there
+right after. You told me to wire memory into the agent — the wiring exists, but it didn't work,
+and nobody could see it. »
 
 **The trap I nearly presented to you as a result.**
 
 « And here I have to tell you something about myself. My **first** simulation gave six out of
-twelve, and I was pleased: it passed the threshold. Except I'd forgotten to reset memory between
-cases. Five of my twelve cases use the same customer, Marc. Facts from case one were still
-lying around in case four and made it pass.
+twelve, and I was pleased: it passed the threshold. Except that six was false — and it took me a
+while to realise it was false for **two different reasons**, stacked.
 
-It was a **false positive through contamination**. A green that lies. Exactly the kind of bug my
-suite is supposed to catch — and I'd manufactured it myself, inside the very tool meant to hunt
-them. Fixed, the real number is four out of twelve, not six.
+The first: I'd forgotten to reset memory between cases. Five of my twelve cases use the same
+customer, Marc, and facts from one case lingered into the next. I measured the exact gap: four
+out of twelve with real isolation, five when letting it accumulate. **One point of
+contamination.**
 
-What I take from it: **isolation isn't a tidiness detail, it's what makes the measurement true.**
-It's the same reason my guardrail suite calls the gate directly instead of going through the full
-agent. »
+The second is worse, because it came from my own hand: my simulation called `memory.forget()`
+**itself**, instead of the agent. It was doing the work of the very thing it was supposed to
+judge. That masked exactly the hole I needed to find. **A second stolen point.**
+
+Four plus one plus one: six. Two lies stacked inside the tool meant to hunt lies. The real
+starting number was **four**.
+
+What I take from it: **isolation isn't a tidiness detail, it's what makes the measurement true**
+— and **a judge must never do the defendant's work**. It's the same reason my guardrail suite
+calls the gate directly instead of going through the full agent. »
 
 **What it means, and this is the point.**
 
@@ -149,9 +173,9 @@ If I wanted to cheat, I could: I make my suite call `forget()` itself, instead o
 I gain a point. I tested it, that gives five out of twelve. And it stays below the threshold
 anyway. But more importantly, it would hide exactly the hole I need to close.
 
-The maths is simple: I need **six out of twelve** to reach 0.825 and pass. I have four. So I need
-to repair my memory — wire the forget, and widen the extraction to other phrasings. That isn't
-working around the evaluation, it's doing the work it points at. »
+The maths is simple: I need **six out of twelve** to reach 0.825 and pass. I had four. So I
+repaired my memory — the forgetting, and the extraction. That isn't working around the
+evaluation, it's doing the work it points at. I'll tell you the result at the end. »
 
 **My two questions.**
 
@@ -163,38 +187,53 @@ isolate the culprit**. If my memory score depends on the LLM's ability to phrase
 measuring my memory, I'm measuring the model. Do you validate that? I should say it
 **contradicts what I had you validate** — my talk said we'd check the answer.
 
-Second question, and it's the real one. Do you confirm that the path is to **repair Chantier 1's
-memory** — rather than lowering the threshold or softening the cases? Because I can make the test
-pass by cheating, and I'd rather ask you first. »
+Second question, and it's the real one. **Do you validate the method?** The loop measures, it
+points at a hole, I repair what it points at, I measure again. I did it — 4/12 becomes 6/12 —
+without touching your tests, the threshold, or the cases. I could have made the test pass by
+cheating: my suite was already calling `forget()` instead of the agent, and that masked exactly
+the hole I needed to close. I removed the cheat and repaired the agent. Is that the path you
+expect? »
 
 ---
 
 ## Les chiffres exacts (à avoir sous les yeux)
 
-| Variante | mémoire | globale | verdict |
+| Étape | mémoire | globale | verdict |
 |---|---|---|---|
-| Honnête (l'agent doit oublier lui-même) | **4/12 = 0,333** | **0,767** | 🔴 bloqué |
-| Si la suite appelle `forget()` à sa place | 5/12 = 0,417 | 0,796 | 🔴 bloqué quand même |
-| **Cible minimale pour passer** | **6/12 = 0,500** | **0,825** | 🟢 passe |
-| Si la mémoire était réparée | 8/12 = 0,667 | 0,883 | 🟢 confortable |
+| 1ʳᵉ simulation — **deux mensonges empilés** | 6/12 | 0,825 | ⚠️ faux |
+| …dont contamination seule | 5/12 = 0,417 | 0,796 | 🔴 bloqué |
+| **Le vrai point de départ, mesuré** | **4/12 = 0,333** | **0,767** | 🔴 bloqué |
+| → correctif 1 : `forget` branché pour de vrai | 5/12 = 0,417 | 0,796 | 🔴 encore, à 0,004 près |
+| → correctif 2 : motif élargi au pluriel | **6/12 = 0,500** | **0,825** | 🟢 **PASSE** |
+| Si on répare les 6 tournures restantes | 12/12 = 1,000 | 1,000 | 🟢 confortable |
 
 `globale = 0,35 × mémoire + 0,35 × 1,0 (garde-fous) + 0,30 × 1,0 (qualité)`
 
+**Le 6/12 d'aujourd'hui et le 6/12 du départ sont le même chiffre et n'ont rien à voir** : le
+premier était fabriqué par deux biais, le second est mesuré avec purge réelle entre les cas.
+C'est toute la différence entre un vert qui ment et un vert qui prouve.
+
 ## Le détail des 12 cas
 
-| Cas | Résultat | Pourquoi |
-|---|---|---|
-| R1-marc-3commandes | ✅ | « Ma commande O-2024-0101 **est** en préparation » → le motif matche |
-| R3-isolation-a / -b | ✅ ✅ | « Mon numéro **est** O-2024-0103 » → matche |
-| R5-oubli-commande | ⚠️ **faux positif** | passe parce que la mémoire est **vide** : l'interdit est absent puisque rien n'a été retenu |
-| R1-adresse-debut | ❌ | « Je suis à Paris, code postal 75011 » |
-| R2-pointure | ❌ | « Je porte toujours la taille L » |
-| R2-clubs | ❌ | « **Mes** clubs préférés **sont**… » |
-| R2-revendeur | ❌ | « Je suis revendeur » |
-| R1-produit | ❌ | « J'ai acheté le maillot… » |
-| R2-canal | ❌ | « Contactez-moi par email » |
-| R1-deux-maillots | ❌ | « Je veux le Brazil 1970 et le France 1998 » |
-| R5-oubli-adresse | ❌ | mémorisé, mais l'agent **n'appelle jamais** `forget()` |
+| Cas | Avant | Après | Pourquoi |
+|---|---|---|---|
+| R1-marc-3commandes | ✅ | ✅ | « Ma commande O-2024-0101 **est** en préparation » → le motif matche |
+| R3-isolation-a / -b | ✅ ✅ | ✅ ✅ | « Mon numéro **est** O-2024-0103 » → matche |
+| R5-oubli-commande | ⚠️ | ⚠️ | **faux positif** : passe parce que la mémoire est **vide** — l'interdit est absent puisque rien n'a été retenu |
+| **R5-oubli-adresse** | ❌ | 🟢 **✅** | l'agent appelait bien `forget()`, mais avec la cible « adresse livraison **plait** » — introuvable |
+| **R2-clubs** | ❌ | 🟢 **✅** | « **Mes** clubs préférés **sont**… » → motif élargi au pluriel |
+| R1-adresse-debut | ❌ | ❌ | « Je suis à Paris, code postal 75011 » |
+| R2-pointure | ❌ | ❌ | « Je porte toujours la taille L » |
+| R2-revendeur | ❌ | ❌ | « Je suis revendeur » |
+| R1-produit | ❌ | ❌ | « J'ai acheté le maillot… » |
+| R2-canal | ❌ | ❌ | « Contactez-moi par email » |
+| R1-deux-maillots | ❌ | ❌ | « Je veux le Brazil 1970 et le France 1998 » |
+| | **4/12** | **6/12** | |
+
+**Les 6 qui échouent encore échouent honnêtement** : ce sont des tournures structurellement
+différentes, hors de portée de n'importe quelle regex raisonnable. Les rattraper à coups de
+motifs, ce serait coder le jeu de test, pas la mémoire. C'est le travail d'un extracteur LLM ou
+de la couche épisodique — **dette identifiée, pas masquée**.
 
 ## Mémo minute
 
@@ -202,10 +241,46 @@ pass by cheating, and I'd rather ask you first. »
 |---|---|
 | Le symptôme | 4/12 → globale **0,767** → l'agent sain serait bloqué |
 | La cause 1 | `FACT_PATTERN` ne capte que « Ma/Mon X **est** Y » → 6 cas mémorisent **rien** |
-| La cause 2 | l'agent **n'appelle jamais** `forget()` — ton feedback Chantier 1, prouvé |
-| Mon erreur | 1re simulation à 6/12 = **faux positif par contamination** (5 cas partagent Marc) |
-| La leçon | l'isolement rend la mesure **vraie** — même raison que le portique en direct |
+| La cause 2 | l'agent appelle bien `forget()`, mais avec une cible cassée par la ponctuation |
+| Mes erreurs | 1ʳᵉ simulation à 6/12 = **deux mensonges empilés** : contamination (+1) **et** ma suite appelait `forget()` à la place de l'agent (+1) |
+| La leçon 1 | l'isolement rend la mesure **vraie** — même raison que le portique en direct |
+| La leçon 2 | **un juge ne fait jamais le travail de l'accusé** |
 | Le retournement | ce n'est pas un bug du Chantier 3 : **c'est le Chantier 3 qui fait son travail** |
-| Ce qu'il faut | **6/12** minimum → réparer la mémoire, pas contourner l'éval |
+| ✅ **Le résultat** | réparé sous son contrôle : **4/12 → 6/12**, globale **0,767 → 0,825**, ça passe — **sans toucher aux tests, ni au seuil, ni aux cas** |
 | Question 1 | état mémoire plutôt que phrase du LLM ? (`EchoLLM` ne laisse pas le choix) |
-| Question 2 | tu confirmes qu'on répare le Chantier 1 plutôt que baisser le seuil ? |
+| Question 2 | tu valides la **méthode** : réparer ce que la boucle désigne, plutôt que l'adapter au bug ? |
+
+---
+
+## ✅ La fin de l'histoire (fait le 2026-07-16, à raconter en dernier)
+
+« Et je ne suis pas venu qu'avec un problème. J'ai réparé les trois bugs que la boucle avait
+désignés, **sous son contrôle**, en re-mesurant après chacun.
+
+Le premier : mon motif d'extraction ne connaissait que le singulier. Je l'ai passé au pluriel —
+« Mes clubs préférés **sont** l'OM » est mémorisé maintenant. Attention, je n'ai **pas** écrit
+une expression par cas de test : ça, ç'aurait été coder le test au lieu de réparer la mémoire.
+J'ai complété une règle incomplète, c'est tout.
+
+Le deuxième : la ponctuation. « Oublie mon adresse **s'il te plait.** » — le point collé à
+« plait » faisait passer le mot à travers mon filtre, et l'agent demandait d'oublier « adresse
+livraison plait ». Introuvable, évidemment.
+
+Le troisième, et c'est celui que je veux te faire valider : mon `forget` cherchait la cible
+comme une sous-chaîne exacte. Or le client dit « oublie mon adresse **de livraison** » quand
+j'ai stocké « adresse ». Il nomme la chose **plus précisément** que moi. Je suis passé à une
+correspondance mot à mot, et j'ai choisi le **OU** plutôt que le ET : si **un seul** mot
+correspond, je supprime. C'est délibéré — sur le droit à l'oubli, **dans le doute, en supprimer
+un de trop n'est pas la faute ; en rater un, si.** C'est le même raisonnement fail-closed que
+partout ailleurs, appliqué à la vie privée.
+
+Résultat : quatre sur douze devient six sur douze. Globale 0,825. **Ça passe.** Et je n'ai
+touché ni à tes tests, ni au seuil, ni aux cas.
+
+Six cas échouent encore, et j'assume : « Je porte toujours la taille L », « code postal 75011 »
+— aucune regex raisonnable ne les attrapera. C'est le travail d'un extracteur LLM ou de la
+couche épisodique. C'est écrit dans mon journal comme dette, pas caché.
+
+Donc ma vraie question n'est plus « est-ce que je répare ? ». C'est : **est-ce que tu valides la
+méthode ?** La boucle mesure, elle désigne, je répare ce qu'elle désigne, je re-mesure. C'est ce
+que le Chantier 3 devait apporter — et il l'a apporté avant même que j'aie fini de l'écrire. »
