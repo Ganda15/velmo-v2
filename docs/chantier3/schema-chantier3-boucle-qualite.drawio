@@ -25,10 +25,10 @@
         <mxCell id="s3" value="SUITE QUALITÉ&#10;qualité des réponses&#10;→ note 0–1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1" vertex="1" parent="1">
           <mxGeometry x="740" y="160" width="200" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="global" value="NOTE GLOBALE&#10;moyenne pondérée des 3&#10;(garde-fous graves = éliminatoires)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1" vertex="1" parent="1">
+        <mxCell id="global" value="NOTE GLOBALE (scoring.py)&#10;3 runs → moyenne → snap 0,02&#10;moyenne pondérée 35/35/30&#10;(fuite grave = ÉCRASEMENT à 0)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1" vertex="1" parent="1">
           <mxGeometry x="400" y="300" width="200" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="ci" value="CI quality.yml&#10;note ≥ seuil ?&#10;(anti-bruit : moyenne 3 runs)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1" vertex="1" parent="1">
+        <mxCell id="ci" value="CI quality.yml&#10;note ≥ seuil 0,8 ?&#10;(&lt; strict : pile au seuil, ça passe)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1" vertex="1" parent="1">
           <mxGeometry x="380" y="430" width="240" height="110" as="geometry" />
         </mxCell>
         <mxCell id="blocked" value="❌ LIVRAISON BLOQUÉE&#10;(régression détectée)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1" vertex="1" parent="1">
@@ -37,8 +37,8 @@
         <mxCell id="ver" value="VERSIONNAGE + note journalisée&#10;version = prompt + config mémoire&#10;+ config garde-fous" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1" vertex="1" parent="1">
           <mxGeometry x="400" y="590" width="200" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="report" value="mlops/report.md — SIGNAUX DE SUIVI&#10;note mémoire · taux de blocage · faux positifs&#10;latence · coût par conversation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1" vertex="1" parent="1">
-          <mxGeometry x="370" y="720" width="260" height="80" as="geometry" />
+        <mxCell id="report" value="mlops/report.md — ÉCRIT TOUJOURS&#10;(avant le verdict : le rapport doit survivre&#10;à l'échec qu'il explique)&#10;note mémoire · blocage · faux positifs&#10;latence · coût (N/A si aucun tarif)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="700" y="300" width="280" height="90" as="geometry" />
         </mxCell>
         <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="ds1" target="s1"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="ds2" target="s2"><mxGeometry relative="1" as="geometry" /></mxCell>
@@ -49,7 +49,7 @@
         <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="global" target="ci"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e8" value="note &lt; seuil" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#b85450;fontColor=#b85450;fontStyle=1" edge="1" parent="1" source="ci" target="blocked"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e9" value="note ≥ seuil ✅" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#82b366;fontColor=#82b366;fontStyle=1" edge="1" parent="1" source="ci" target="ver"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="ver" target="report"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e10" value="TOUJOURS" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#9673a6;fontColor=#9673a6;fontStyle=1" edge="1" parent="1" source="global" target="report"><mxGeometry relative="1" as="geometry" /></mxCell>
       </root>
     </mxGraphModel>
   </diagram>
