@@ -838,6 +838,28 @@ fausses** (`memory/__init__.py:103` → `:118`, `agent.py:114` → `:115`) : **m
 du Chantier 1 avaient décalé les lignes**. *Un cours qui envoie au mauvais endroit serait pire
 qu'aucun cours.*
 
+### 🔴 SCHÉMA BOUCLE QUALITÉ — 3 erreurs trouvées (2026-07-17, `33ba1b4`)
+J'avais écrit qu'il « restait juste ». **Era a demandé de le re-vérifier — il avait raison.**
+Confronté **affirmation par affirmation** au code, pas à mon souvenir :
+| Le schéma disait | Le code (fichier:ligne) |
+|---|---|
+| 🔴 rapport **APRÈS** le verdict | `score.py:56` puis `:59` → `write_report` **AVANT** `enforce_threshold` |
+| 🟠 « anti-bruit : moyenne 3 runs » **dans la CI** | `scoring.py:95` et `:102` → c'est dans **`aggregate`**, en amont |
+| 🟠 « coût **par conversation** » | `report.py:46` → « Cout », et c'est **27 appels LLM sur 3 tours** |
+**🔴 La n°1 inversait le sens du chantier.** Le schéma dessinait **une seule flèche** :
+`CI → note ≥ seuil ? → OK → VERSIONNAGE → report.md`. Donc **en cas de blocage, la flèche part
+vers « LIVRAISON BLOQUÉE » et le rapport n'est JAMAIS écrit**. C'est exactement le contraire du
+cœur de T014 : *le rapport doit survivre à l'échec qu'il explique*. **Le schéma montrait un
+rapport qu'on n'obtient qu'en cas de succès — c'est-à-dire un rapport inutile.**
+→ Corrigé : le rapport se branche sur la **NOTE GLOBALE**, flèche **« TOUJOURS »**.
+**Leçon** : je m'étais fié à « les concepts n'ont pas changé ». **Faux** — le *concept* du
+rapport a changé quand on a écrit T014, et le schéma de conception a vieilli avec.
+*Même un schéma « conceptuel » se re-vérifie contre le code.*
+Précisé au passage : « lit l'état mémoire », « portique en direct », « blocage × (1 − fp) »,
+« respond() : la chaîne entière », « fuite grave ⇒ ÉCRASEMENT à 0 », « < strict : pile au seuil,
+ça PASSE », « GATE ACTIF », exit 0 / exit 1, `v-15c0a01673a5`, et **l'issue LIVRAISON AUTORISÉE
+qui manquait**. Mise en page : 3 chevauchements corrigés, vérifiés à l'œil après rendu.
+
 ### 🔍 SCHÉMAS RE-VÉRIFIÉS contre le code (2026-07-17, `1b576cd`)
 Demande d'Era **avant** d'écrire le cours. Les schémas datent d'avant le code — **5 affirmations
 périmées** trouvées dans la **vue implémentation**, toutes corrigées (`.drawio` + `.png`) :
