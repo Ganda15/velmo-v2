@@ -119,7 +119,12 @@ class Agent:
             )
             stop = {"ma", "mon", "mes", "la", "le", "les", "de", "du", "stp", "svp",
                     "s'il", "te", "plait", "plaît", "information", "informations"}
-            target = " ".join(w for w in words if w not in stop).strip(" .!?")
+            # Ponctuation retirée AVANT le filtre : « plait. » ne matche pas
+            # « plait » dans stop, et la cible devenait « adresse livraison
+            # plait » — que forget() ne retrouvait jamais. Trouvé par la suite
+            # d'évaluation du Chantier 3 (cas R5-oubli-adresse).
+            cleaned = (w.strip(".,!?;:") for w in words)
+            target = " ".join(w for w in cleaned if w and w not in stop)
             removed = self.memory.forget(user_id, target)
             if removed:
                 return f"C'est noté, j'ai oublié ce qui concerne « {target} » ({removed} information supprimée)."

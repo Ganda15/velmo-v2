@@ -16,9 +16,12 @@ from .store import MemoryFact, Session
 
 Turn = tuple[str, str]  # (role, content)
 
-# Motif « Ma commande prioritaire est X » / « Mon adresse de livraison est X »
+# Motif « Ma commande prioritaire est X » / « Mes clubs préférés sont X ».
+# Généralisation de la règle au pluriel (mes/sont) — révélée par la suite
+# d'évaluation du Chantier 3 : « Mes clubs préférés sont l'OM » ne mémorisait
+# RIEN. On complète la règle existante, on n'ajoute pas un cas particulier.
 FACT_PATTERN = re.compile(
-    r"\b(?:ma|mon)\s+(.+?)\s+est\s+(.+?)[.!?]?$",
+    r"\b(?:ma|mon|mes)\s+(.+?)\s+(?:est|sont)\s+(.+?)[.!?]?$",
     re.IGNORECASE,
 )
 
@@ -86,7 +89,16 @@ class MemoryManager:
 
     def forget(self, user_id: str, target: str) -> int:
         """Supprime les souvenirs correspondant à `target`. Renvoie le nombre supprimé."""
-        needle = target.strip().lower()
+        # Correspondance MOT À MOT, pas sous-chaîne stricte : l'agent envoie
+        # « adresse livraison » (articles filtrés) mais la clé stockée peut être
+        # simplement « adresse » — la sous-chaîne échouait toujours. Un souvenir
+        # matche si AU MOINS UN mot demandé apparaît dans sa clé ou sa valeur :
+        # le client nomme souvent la chose plus précisément que ce qui est
+        # stocké. Droit à l'oubli (R5, RGPD) : dans le doute, SUR-supprimer est
+        # le sens sûr — rater une suppression est la faute, pas l'inverse.
+        needle_words = target.strip().lower().split()
+        if not needle_words:
+            return 0
         with Session() as session:
             rows = session.scalars(
                 select(MemoryFact).where(
@@ -94,7 +106,10 @@ class MemoryManager:
                     MemoryFact.deleted.is_(False),
                 )
             ).all()
-            hits = [row for row in rows if needle in row.key or needle in row.value.lower()]
+            hits = [
+                row for row in rows
+                if any(w in row.key or w in row.value.lower() for w in needle_words)
+            ]
             for row in hits:
                 row.deleted = True
             session.commit()
