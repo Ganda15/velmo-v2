@@ -7,9 +7,23 @@
 > **PARTIE 2** = l'oral parlé, FR puis EN.
 > **PARTIE 3** = version express 5 min.
 >
-> ⚠️ **Cadre d'honnêteté** : ce schéma est un **plan d'implémentation**. À ce jour, **seul T003
-> (`versioning.py`) est écrit**. Tout le reste est conçu, découpé, ordonné — pas construit.
-> Je le dis en ouverture. Je ne présente jamais du non-fait comme fait.
+> ⚠️ **Cadre d'honnêteté — MIS À JOUR le 2026-07-16 (soir)**. Ce document a d'abord été écrit
+> quand seul T003 existait. **Ce n'est plus le cas.** État réel, mesuré :
+>
+> | Tâche | État | Preuve |
+> |---|---|---|
+> | T003 `versioning.py` | ✅ | `v-15c0a01673a5` stable sur 2 runs |
+> | T004 `cases.py` | ✅ | `12 35 8` · les 4 raisons lèvent |
+> | T005 `memory_suite` | ✅ | `0.500` (6/12) · ⚠️ **écart à faire arbitrer** |
+> | T006 `guardrail_suite` | ✅ | `1.000` · l'alarme sonne sur l'agent dégradé |
+> | T007 `quality_suite` | ✅ | `1.000` (8/8) |
+> | T008 `scoring.py` · T009 câblage · T010→T015 | ❌ | **pas construits** |
+>
+> **Les 3 suites tournent pour de vrai** : agent sain → globale **0,825** (passe) ; agent
+> dégradé → **0,000** (bloqué). Il reste à agréger (T008) et à câbler dans `run_eval` (T009)
+> pour que les 3 tests d'acceptance passent au vert — **ils sont encore rouges aujourd'hui.**
+>
+> Je ne présente jamais du non-fait comme fait. Et je ne me sous-vends pas non plus.
 
 ---
 
@@ -85,10 +99,12 @@ telle qu'elle est stockée en base, pas une traduction. L'agent doit remonter la
 sa propre lecture, j'ai trois façons de rater la même erreur. Un seul chargeur = un seul
 endroit où la règle de sécurité est écrite.
 
-**La règle : FAIL-CLOSED.** Trois situations lèvent `EvalDataError` :
+**La règle : FAIL-CLOSED.** **Quatre** situations lèvent `EvalDataError` :
 - le fichier est **manquant** ;
 - le fichier est **vide** ;
-- **une ligne** ne passe pas `json.loads`.
+- **une ligne** ne passe pas `json.loads` ;
+- un **`id` est dupliqué** — doublon silencieux : la même attaque comptée deux fois, la note
+  faussée, aucune erreur. *(Idée reprise de Velmo-3, cf. `velmo3-elements-recuperes.md`.)*
 
 **Pourquoi c'est le cœur de cette étape.** Imagine le contraire (fail-open) : le fichier
 garde-fous est vide, la suite tourne sur zéro cas, et rend une note de… 100 %. La CI voit
@@ -110,13 +126,29 @@ c'est ce que « parallèles » veut dire dans le pied de page.
 ### `suites/memory_suite.py` — T005 · `run_memory_suite(agent)`
 Pour chaque cas : je **rejoue les tours `user` dans l'ordre** via `agent.respond(user_id,
 content)`. Chaque appel construit un vrai état mémoire, exactement comme une vraie
-conversation. Ensuite je pose la `question` d'évaluation et je vérifie que la réponse contient
-l'`expected_substring`.
-**Note = cas réussis / total.**
+conversation. Ensuite je lis **l'état de la mémoire** — `agent.memory.read(user_id,
+question).facts` — et je vérifie l'attendu dedans. **Note = cas réussis / total** → **0,500
+(6/12)** mesuré.
+
+⚠️ **Écart assumé, à faire arbitrer** : la conception validée disait « je pose la question et je
+vérifie la **réponse** ». **Impossible** : `conftest.py:47` code `EchoLLM` en dur et
+`test_mlops.py` l'utilise ; la question d'éval tombe sur le LLM, qui **répète au lieu de
+répondre** → 0/12 → globale 0,65 → **l'agent SAIN serait bloqué**. On mesure donc la mémoire,
+pas le talent du modèle à formuler. Détail complet : `oral-blocage-T005-formateur.md`.
 
 **Pourquoi rejouer au lieu d'injecter la mémoire à la main ?** Parce que je veux tester la
 **chaîne complète** : l'extraction du fait, l'écriture en base, la relecture. Injecter
 directement testerait mon test, pas mon agent.
+
+**Trois formes de cas, pas une** — le découpage initial l'ignorait : `recall` (6) et
+`persistence` (4) → `expected_substring` **présent** ; **`forget` (2) → `forbidden_substring`,
+vérification INVERSÉE** (l'attendu doit être **absent**). À la lettre : `KeyError`.
+
+**Deux interdits qui décident du résultat** : (1) **jamais** appeler `forget()` soi-même — le
+tour « Oublie mon adresse » est dans les `turns`, c'est à l'agent de l'entendre ; *un juge ne
+fait jamais le travail de l'accusé*. (2) **jamais** purger entre les cas — les cas R3 testent
+que Marc ne voit pas la commande de Sophie, ils **doivent coexister** ; purger rendrait le test
+d'isolation **vide**.
 
 ### `suites/guardrail_suite.py` — T006 · `run_guardrail_suite(agent)`
 Ici je fais **l'inverse** : j'appelle `agent.guardrails.check_input(message)` — ou
@@ -167,7 +199,7 @@ pondérée dirait « 0,85, ça passe » — je refuse qu'une bonne note mémoire
 laisser passer une fuite. Et « UN SEUL run » parce que sur 3 exécutions, une fuite qui
 n'apparaît qu'une fois **reste une fuite**.
 
-### `versioning.py` — T003 · **la seule brique déjà écrite**
+### `versioning.py` — T003 · **la fondation, écrite en premier**
 ```python
 def _config_snapshot() -> dict:
     memory = MemoryManager()
@@ -303,10 +335,15 @@ T001–T002 préparent, T016–T018 vérifient.*
 **Ouverture — le cadre, tout de suite.**
 
 « Le premier schéma répondait à *pourquoi* une boucle qualité. Celui-ci répond à la question
-d'après : *concrètement, tu écris quoi, où, et dans quel ordre ?* Je te préviens tout de suite
-sur l'état : là-dedans, **une seule brique est écrite**, `versioning.py`. Tout le reste est
-conçu, découpé en tâches, ordonné — mais pas construit. Ce que je te montre, c'est mon plan
-d'implémentation, pas un bilan. »
+d'après : *concrètement, tu écris quoi, où, et dans quel ordre ?*
+
+Je te dis tout de suite où j'en suis, pour que tu saches ce que tu regardes. **Le haut du schéma
+existe** : le chargeur de cas et les trois suites sont écrits et tournent. Je peux te donner les
+chiffres : mémoire 0,50, garde-fous 1,00, qualité 1,00. **Le bas n'existe pas encore** :
+l'agrégation, le câblage, la CLI, le gate. Mes trois tests d'acceptance sont donc **encore
+rouges**, et c'est normal — rien n'est branché dans `run_eval`.
+
+Ce que je te montre, c'est donc une carte : ce qui est construit, et ce qui reste. »
 
 **Le trajet d'un cas — étape 1.**
 
@@ -327,10 +364,16 @@ test cassé doit faire hurler le système, jamais le rendre optimiste. »
 dans n'importe quel ordre.
 
 La **mémoire** rejoue de vraies conversations : je renvoie les messages du client, un par un,
-dans `respond()`. Ça reconstruit un vrai état mémoire. Ensuite je pose la question et je
-vérifie que l'agent se souvient. Je rejoue au lieu d'injecter la mémoire à la main, parce que
-je veux tester la chaîne complète — extraction, écriture, relecture. Injecter, ça testerait mon
-test.
+dans `respond()`. Ça reconstruit un vrai état mémoire. Ensuite — et c'est le point que je dois
+te faire valider — je regarde **ce que l'agent sait**, pas ce qu'il en dit. Je lis l'état de sa
+mémoire directement. Parce que l'agent d'évaluation utilise `EchoLLM`, qui répète la question
+au lieu d'y répondre : si je vérifiais la phrase, j'obtiendrais zéro sur douze et mon agent
+**sain** serait bloqué. Je mesure ma mémoire, pas le talent du modèle à formuler.
+
+Je rejoue quand même au lieu d'injecter la mémoire à la main, parce que je veux tester la
+chaîne complète — extraction, écriture, relecture. Injecter, ça testerait mon test. Résultat
+mesuré : **0,50**. La moitié des cas ne mémorise rien, et c'est honnête : mon extraction ne
+connaît qu'une tournure de phrase. C'est une dette que j'assume, pas un bug que je cache.
 
 Les **garde-fous**, je fais exactement l'inverse, et c'est le point que je veux que tu regardes :
 je n'appelle **pas** `respond()`. J'appelle `check_input` et `check_output` **en direct**.
@@ -419,10 +462,15 @@ visite qu'à la fin. »
 **Opening — the frame, right away.**
 
 « The first diagram answered *why* a quality loop. This one answers the next question:
-*concretely, what do you write, where, and in what order?* Let me be upfront about the status:
-in here, **only one brick is written**, `versioning.py`. Everything else is designed, broken
-into tasks, ordered — but not built. What I'm showing you is my implementation plan, not a
-report of finished work. »
+*concretely, what do you write, where, and in what order?*
+
+Let me tell you straight away where I stand, so you know what you're looking at. **The top of
+the diagram exists**: the case loader and the three suites are written and running. I can give
+you the numbers: memory 0.50, guardrails 1.00, quality 1.00. **The bottom doesn't exist yet**:
+the aggregation, the wiring, the CLI, the gate. So my three acceptance tests are **still red**,
+and that's normal — nothing is plugged into `run_eval` yet.
+
+So what I'm showing you is a map: what's built, and what's left. »
 
 **The journey of one case — step 1.**
 
@@ -442,9 +490,16 @@ make it optimistic. »
 « Below, three suites, one per pillar. They're independent, so I can write them in any order.
 
 **Memory** replays real conversations: I send the customer's messages back, one by one, through
-`respond()`. That rebuilds genuine memory state. Then I ask the question and check the agent
-remembers. I replay instead of injecting memory by hand, because I want to test the whole
-chain — extraction, write, read back. Injecting would test my test.
+`respond()`. That rebuilds genuine memory state. Then — and this is the point I need you to
+validate — I look at **what the agent knows**, not what it says about it. I read its memory
+state directly. Because the evaluation agent uses `EchoLLM`, which echoes the question instead
+of answering it: if I checked the sentence, I'd get zero out of twelve and my **healthy** agent
+would be blocked. I'm measuring my memory, not the model's ability to phrase.
+
+I still replay instead of injecting memory by hand, because I want to test the whole chain —
+extraction, write, read back. Injecting would test my test. Measured result: **0.50**. Half the
+cases store nothing, and that's honest: my extraction only knows one sentence pattern. It's a
+debt I own, not a bug I hide.
 
 For **guardrails** I do the exact opposite, and this is the point I want you to look at: I do
 **not** call `respond()`. I call `check_input` and `check_output` **directly**. Why? Because I'm
@@ -528,7 +583,7 @@ visits it at the end. »
 
 | Zone du schéma | Le mot-clé | Le pourquoi en 5 mots |
 |---|---|---|
-| Ouverture | plan, pas bilan | seul T003 est écrit |
+| Ouverture | carte : le haut existe, le bas non | T003→T007 faits · T008→T015 non |
 | Étape 1 | une seule porte, fail-closed | fichier vide = 100 % = danger |
 | Étape 2 mémoire | rejouer, pas injecter | tester la chaîne complète |
 | Étape 2 garde-fous | portique en direct | isoler le coupable |
@@ -545,16 +600,18 @@ visits it at the end. »
 # PARTIE 3 — Version express (5 min · FR)
 
 **0:00–0:30 — Le cadre.** « Le premier schéma disait *pourquoi*. Celui-ci dit *comment* :
-quels fichiers, quelles fonctions, dans quel ordre. État réel : une seule brique écrite,
-`versioning.py`. Le reste est conçu et découpé, pas construit. »
+quels fichiers, quelles fonctions, dans quel ordre. État réel : **le haut du schéma existe** —
+chargeur et les 3 suites tournent (mémoire 0,50 · garde-fous 1,00 · qualité 1,00). **Le bas
+non** : agrégation, câblage, CLI, gate. Mes 3 tests sont donc encore rouges, c'est normal. »
 
 **0:30–1:15 — Étape 1.** « Trois fichiers de cas — douze, trente-cinq, huit — entrent par une
 seule porte, `cases.py`. Une seule, sinon j'ai trois façons de rater la même erreur. Et elle est
 fail-closed : fichier vide ou JSON cassé, ça lève. Sinon, zéro cas donnerait cent pour cent, et
 la CI livrerait un agent sans garde-fous. »
 
-**1:15–2:15 — Étape 2.** « Trois suites. La mémoire rejoue de vraies conversations pour tester
-la chaîne complète. Les garde-fous, à l'inverse, appellent le portique **en direct** — pour
+**1:15–2:15 — Étape 2.** « Trois suites. La mémoire rejoue de vraies conversations, puis je
+regarde ce que l'agent **sait**, pas ce qu'il en dit — l'agent d'éval utilise EchoLLM qui répète
+au lieu de répondre. Elle donne 0,50. Les garde-fous, à l'inverse, appellent le portique **en direct** — pour
 qu'un test rouge ne puisse désigner qu'un coupable. Deux taux : blocage et faux positifs,
 multipliés, pour qu'on ne puisse pas tricher en bloquant tout. Et la qualité, qui prouve que
 l'agent sert encore à quelque chose. »
