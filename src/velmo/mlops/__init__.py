@@ -53,7 +53,10 @@ def enforce_threshold(scores: Scores, min_score: float) -> None:
 
 def write_report(scores: Scores, path: Path) -> None:
     """Écrit le rapport de suivi (note mémoire, blocage, faux positifs, latence, coût)."""
-    raise NotImplementedError("write_report")
+    from velmo.mlops import report          # import différé : report importe
+                                            # current_version() depuis ce module
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(report.render(scores), encoding="utf-8")
 
 
 def current_version() -> str:
