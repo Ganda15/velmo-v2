@@ -635,8 +635,40 @@ Claude donne code + explication dans le chat, application seulement sur « do it
 - ⏸️ **T005 (mémoire)** — EN ATTENTE DE L'ARBITRAGE FORMATEUR (2 questions : évaluer l'état
   mémoire plutôt que la phrase ; confirmer que réparer le Chantier 1 était le bon chemin —
   déjà fait, à faire valider). Support : `oral-blocage-T005-formateur.md`.
-- 🟢 **T006 (garde-fous) · T007 (qualité)** — LIBRES, indépendants de l'arbitrage.
-  T006 recommandé en premier (asymétrie portique direct + serious_leak).
+- ✅ **T006 (garde-fous) — FAIT ET CONTRE-VÉRIFIÉ (2026-07-16, commit `0e51ea1`)**.
+  `suites/guardrail_suite.py` : `run_guardrail_suite(agent) -> GuardrailSuiteResult`.
+  Code proposé par la session VS Code, appliqué et **passé au banc d'essai** par la session
+  principale — lire du code ne prouve rien, seul l'exécuter prouve quelque chose.
+  **Sondé AVANT de coder** (méthode qui a payé 2 fois de suite) : aucune surprise, contrairement
+  à T005. Les 2 green checks passaient déjà en simulation.
+  **Preuves mesurées :**
+  - agent sain : `block_rate 23/23 = 1.000` · `fp 0/12 = 0.000` · `score 1.000` · `leak False`
+  - agent dégradé (`AllowAllGuardrails`) : `score 0.000` · **`leak True`** → **l'alarme sonne**.
+    C'est LE cœur de T006 : un détecteur d'incendie qui ne sonne jamais est indistinguable d'un
+    détecteur en panne. La seule façon de savoir qu'il marche, c'est d'allumer un feu.
+  - **Piège du dénominateur testé** (l'erreur classique : diviser par 35 au lieu de 12) :
+    agent fabriqué qui bloque TOUT → `fp = 1.0000` (12/12), pas `0.3429` (12/35). ✅ Et son
+    `score = 0.000` : **la multiplication écrase bien le tricheur** — preuve exécutable que
+    `br × (1-fp)` n'est pas une moyenne.
+  - 0 appel à `.respond()` dans le fichier (vérifié ; le mot n'apparaît que dans la docstring).
+  - 3 rouges inchangés · suite complète `16 passed` · ruff `All checks passed`.
+  **Frontière des catégories graves assumée** : `{hate, violence, sexual, pii, secret_leak}` =
+  **14 des 23 blocages**. `prompt_injection` (4) et `out_of_scope` (5) volontairement DEHORS —
+  les 5 retenues sont celles où le mal est fait **envers un humain ou sur ses données**, pas
+  envers le système. Choix de conception à défendre à l'oral.
+  **Le 1.000 n'est pas de la chance** : c'est le résultat direct des 3 failles corrigées HORS
+  des tests (accents, `CARD_RE` en entrée, `_contient` ancré). Note 0,917 → 1,000.
+  **Détail utile pour l'oral** : `Scores` a 8 champs et **seuls les garde-fous exposent leurs
+  internes** (`block_rate`, `false_positive_rate`). Mémoire et qualité rendent une note, point.
+  Ces 2 taux remontent au sommet parce que le rapport de surveillance (C20) doit les afficher :
+  ce ne sont pas des détails d'implémentation, ce sont des **signaux de production**.
+  ⚠️ **Deux erreurs de MES propres contrôles, corrigées** : (1) un `grep` a échoué faute de
+  `cd`, et ma condition `||` a affiché « OK » sur une erreur ; (2) le grep suivant a trouvé
+  « respond » dans la **docstring** et crié à l'interdit. Deux faux verdicts d'affilée dans
+  l'outil censé vérifier. Leçon : **un contrôle qui ne distingue pas « rien trouvé » de
+  « pas pu chercher » ment.** Même famille que le fail-closed de T004.
+- 🟢 **T007 (qualité)** — LIBRE, indépendant de l'arbitrage. Simulé : 8/8 avec EchoLLM (les
+  réponses métier viennent des outils et de la FAQ, pas du modèle).
 - 🔧 **HORS-SÉRIE (2026-07-16 soir)** — Chantier 1 réparé sous le contrôle de la boucle
   qualité : 4/12 → 6/12, globale 0,767 → 0,825 (PASSE). 3 correctifs commit `e3bb30c`.
   Récit complet dans la section FAIT ci-dessus.
