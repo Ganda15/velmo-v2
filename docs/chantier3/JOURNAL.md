@@ -661,6 +661,10 @@ Claude donne code + explication dans le chat, application seulement sur « do it
     le droit à l'oubli cassé**. C'est bien R5 qu'elle mesure, pas autre chose.
   - 3 rouges inchangés · suite complète `16 passed` · ruff `All checks passed`.
 
+- ✅ **T012 (`report.py`) — FAIT (2026-07-17, `ff76f1e`)**. Dette du « zéro inventé » PAYÉE.
+  ⚠️ **Trouvé en le lisant des yeux** : le rapport du dégradé affiche 0.000 sans dire pourquoi
+  (le `serious_leak` n'est pas dans `Scores`). Détail dans la section FAIT.
+- ⏭️ **T013 (câbler `write_report`) — LA DERNIÈRE TÂCHE avant le tout-vert.**
 - ✅ **T010 (`enforce_threshold`) — FAIT, 2ᵉ test VERT (2026-07-17, `5c993d6`)**. `<` strict :
   pile au seuil, ça passe. ⚠️ **Dette : le piège flottant** (32 combos/75 bloquées à tort).
 - ✅ **T009 (câblage) — FAIT, 1er test VERT (2026-07-17, `ba96c83`)**. Détail dans la section FAIT.
@@ -761,7 +765,48 @@ arbitrage serait pire que la dette. **C'est une décision de conception, pas un 
 Piste si le formateur valide : comparer sur la grille du snap (entiers de 0,02) plutôt qu'en
 flottant, ou `math.isclose`. **À porter avec les 2 autres questions.**
 
-### 📌 DETTE AJOUTÉE — le « zéro inventé » du coût (à traiter en T012/T013)
+### ✅ T012 — rendu du rapport (2026-07-17, commit `ff76f1e`) · dette du zéro inventé PAYÉE
+`report.py` : `render(scores) -> str`. **NE fait PAS passer le test** — c'est T013 qui câble
+(`18 passed, 1 failed`, normal). Découpage délibéré : `render` fabrique du texte, `write_report`
+l'écrit. Une fonction qui calcule **et** écrit un fichier est intestable sans toucher au disque.
+- 🔴 **Libellés SANS ACCENTS — prouvé, pas supposé** : `"mémoire".lower()` == `"mémoire"` ≠
+  `"memoire"`. **`.lower()` ne retire PAS les accents.** Un seul accent bien intentionné et le
+  test échoue. **C'est le miroir exact de la faille n°1 des garde-fous** (mots-clés sans
+  accents vs message qui les garde) : même cause, sens inverse. Un commentaire dans le fichier
+  dit POURQUOI — sinon quelqu'un « corrigera » l'orthographe dans six mois. Vérifié : **0
+  caractère non-ASCII** dans les 8 libellés. Bonne nouvelle mesurée : « Taux de faux positif**s** »
+  contient bien `faux positif` — le pluriel englobe le singulier.
+- 🟢 **DETTE DU « ZÉRO INVENTÉ » PAYÉE** (l'idée venait de Velmo-3) :
+  `Cout : N/A (aucun tarif configure — EVAL_COST_PER_CALL non defini)` au lieu de `0.00`.
+  Le test cherche le mot `cout`, **pas la valeur** → le mot-clé reste, la valeur devient
+  honnête. **Un test à satisfaire n'oblige jamais à écrire un mensonge.** La latence, elle, est
+  **vraiment mesurée** (2,08 ms) → elle affiche sa valeur. **Le contraste est l'argument
+  d'oral** : *on affiche ce qu'on sait, on dit « je ne sais pas » quand on ne sait pas.*
+- Import **différé** de `current_version()` dans `render()` + `Scores` sous `TYPE_CHECKING` :
+  `__init__` importera `report` en T013 → un import en tête créerait le cycle. Même famille que
+  le dict d'`aggregate` (T008).
+
+### 🔴 TROUVÉ EN LISANT LE RAPPORT DES YEUX — aucun test ne l'aurait vu (2026-07-17)
+Rapport de l'agent **dégradé**, tel qu'il sort aujourd'hui :
+```
+- Score memoire : 0.500      0,35×0,5 + 0,35×0 + 0,30×1 = 0,475
+- Score garde-fous : 0.000                                  ↑
+- Score qualite : 1.000      mais le rapport annonce  ->  0.000
+- Note globale : 0.000       LES CHIFFRES NE S'ADDITIONNENT PAS
+```
+**Un lecteur ferait le calcul et croirait à un bug.** La vraie raison est le `serious_leak` —
+mais il **n'apparaît nulle part**, et il ne *peut* pas : `Scores` a 8 champs et `serious_leak`
+n'en fait pas partie. **L'information est perdue dans `aggregate()`.**
+**Le rapport ment par omission** : il montre un zéro sans dire pourquoi. C'est le contraire de
+C20 — *le verdict dit « non », le rapport doit dire « pourquoi »*. Velmo-3, lui, affiche
+`Failed hard gates: none` et `Decision: PASS` (cf. `velmo3-elements-recuperes.md`).
+**Piste sans toucher au contrat** : `render()` peut **déduire** le plafond — `global_` vaut soit
+la moyenne pondérée, soit 0.0 ; si `global_ == 0` alors que la moyenne pondérée est > 0, le
+plafond a frappé. Tout est dans `Scores`, rien à changer ailleurs. **À arbitrer avec Era.**
+Aucun test ne l'aurait attrapé : c'est la relecture humaine qui l'a vu. *Un rapport que
+personne ne relit est un rapport que personne ne lira.*
+
+### 📌 DETTE PAYÉE — le « zéro inventé » du coût (réglée en T012, voir ci-dessus)
 `EVAL_COST_PER_CALL` **n'est pas dans le `.env`** → `cost = 186 × 0.0 = 0.0`. C'est exactement
 le piège repéré chez Velmo-3 : **un coût de 0,00 € sans aucun tarif configuré ressemble à une
 bonne nouvelle, alors que ça veut dire « je n'en sais rien »**. `Scores.cost` est un `float`, il
