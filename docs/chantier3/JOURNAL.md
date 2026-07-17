@@ -831,8 +831,19 @@ Avec `EVAL_COST_PER_CALL=0.002` : le rapport annoncerait **0,37 €** au lieu de
 = 0.0`. **Le zéro masquait l'erreur** — la dette du « zéro inventé » cachait un vrai bug de
 calcul. Corollaire : `latency_ms` (2,08 ms) est **effondrée** par 159 appels regex quasi
 instantanés — elle ne reflète pas le coût réel d'un tour d'agent.
-**Correctif** : compter au niveau de `agent.llm.invoke`, pas de `respond`. **En attente
-d'arbitrage d'Era** (écart au contrat dans un fichier déjà validé).
+**🟢 CORRIGÉ (2026-07-17, commit `5bcd389`)** — Era a tranché « continue ». Deux compteurs
+distincts, **parce qu'ils mesurent deux choses différentes** :
+| compteur | valeur | ce qu'il mesure |
+|---|---|---|
+| `proxy.calls` | **186** | **latence** — le temps que subit un **CLIENT** |
+| `proxy.llm_calls` | **27** | **coût** — ce qu'on paie au **FOURNISSEUR** |
+*Confondre les deux, c'était payer pour du regex.*
+Mesuré avec `EVAL_COST_PER_CALL=0.002` : **0,3720 € → 0,0540 €**.
+**Le piège technique** : le proxy délègue `respond()` au **VRAI** agent, donc c'est **son**
+`llm` qui est appelé — envelopper `proxy.llm` n'aurait **rien compté**. On enveloppe donc
+`agent.llm` et on le **restaure dans un `finally`** : *`aggregate()` ne doit pas laisser de
+trace sur l'agent qu'on lui prête*. Vérifié : `EchoLLM` avant → `EchoLLM` après.
+Notes inchangées (0.825) · 19 passed · ruff propre.
 
 ### 🟢🟢🟢 T013 — LES 3 TESTS SONT VERTS · **19 passed, 0 failed** (2026-07-17, `b9ba635`)
 ```
