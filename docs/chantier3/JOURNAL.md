@@ -45,6 +45,28 @@ Bien séparer les deux, pour ne pas présenter au formateur ce qui n'est pas dem
 
 ## ✅ FAIT
 
+### 🚨 SAUVETAGE — 3 semaines de travail vivaient HORS de git (2026-07-16, 1ʳᵉ action)
+Découvert en début de session : **13 fichiers non commités**, dont `src/velmo/memory/store.py`
+et `docs2/` (47 fichiers) en **`??` non suivis** — git ne les protégeait **pas du tout**.
+Un `git clean -fd` malheureux et ils partaient sans confirmation.
+**Le plus grave** : le **correctif de la faille n°3** des garde-fous (`_contient`, note 0,917 →
+1,000) existait en **un seul exemplaire au monde**, non commité. La version de `velmo-v2` est
+**antérieure** — vérifié, elle n'a pas `_contient`.
+**Commité en 5 tranches logiques** pour que l'historique raconte l'histoire :
+| commit | contenu |
+|---|---|
+| `e7d1500` | **Chantier 1 mémoire** — `store.py` (table `memory_facts`, soft-delete R5) + `read`/`write`/`remember_fact`/`forget` |
+| `c5e0282` | **Chantier 2 garde-fous** — les 3 failles fermées (accents · `CARD_RE` en entrée · `_contient` ancré) |
+| `ad3686a` | branchement mémoire (`MemoryContext`) + traçage LangSmith (bonus C20, import défensif) |
+| `c25db1a` | `docs2/` — journaux, oraux FR/EN, schémas, démos des Chantiers 1 & 2 |
+| `5fd3d7d` | `docs/chantier3/` — schémas, oraux, journal, fiche T004 |
+**Cause racine de la divergence** (comprise, pas subie) : `Velmo-2.2` a été copié depuis
+`velmo-v2` **avant** que le travail des Chantiers 1&2 y soit commité (`8092250`). La copie a
+emporté les **fichiers**, pas l'**historique**. Les deux dépôts se séparent exactement là.
+⚠️ **Aucun secret commité** : `.env` est ignoré (`.gitignore:24`), vérifié avant chaque `git add`.
+⚠️ **Pas de `Co-Authored-By: Claude`** : ce code, Era l'a écrit lui-même. L'attribuer à Claude
+serait faux, et un jury RNCP lit l'historique git.
+
 ### Croisement contrat ↔ spec (2026-07-11) — vérification du combo outils
 Avant `/speckit-plan`, croisé le CONTRAT réel (`tests/acceptance/test_mlops.py` +
 `.github/workflows/quality.yml`) avec notre `specs/001-quality-eval-loop/spec.md`.
@@ -332,7 +354,35 @@ Il a un Chantier 3 plus avancé (design 210 lignes + `mlops/` complet). Récolte
 - 💬 **À mentionner seulement** : mutations `--mutation memory-disabled` en CLI (démo live) ;
   adaptateur aveugle à la réponse attendue (argument d'oral).
 
-### 🟢 STACK COMPLÈTE DEBOUT (2026-07-16) — Postgres + Chroma + HF + gpt-5.4
+### 🖥️ DÉMO WEB GRADIO (2026-07-16, commits `2319361` + `d31a69c` + `32ca5d9`) — HORS contrat
+`src/velmo/ui/app.py` + extra `ui` (`gradio>=5,<6`). **Hors contrat du brief** : l'interface
+imposée reste `velmo/cli.py`. **Purement additif** — aucun test ne l'importe, son absence ne
+change rien. **C'est le terrain de pratique d'Era** : c'est là que la vraie stack tourne
+(Postgres · Chroma · HF · gpt-5.4 · LangSmith), pas dans l'évaluation.
+Lancement : `.\.venv\Scripts\python.exe -m velmo.ui.app` → `http://127.0.0.1:7860`.
+Testé de bout en bout : statut de commande ✅ · attaque bloquée ✅ · « Ma taille est L » →
+onglet Mémoire affiche `taille : L` ✅.
+**🔴 TROIS messages menteurs écrits puis corrigés — même famille, 3 formes :**
+1. Le bandeau disait **« Postgres injoignable »** alors que la vraie cause était **Chroma**
+   (piège `host="chroma"`). *Accuser le mauvais service envoie chercher au mauvais endroit.*
+2. L'onglet Mémoire appelait **`inspect()`** — un **stub** qui renvoie `{"facts": {},
+   "episodic": []}` en dur. Il aurait affiché « aucun souvenir » **avec la mémoire pleine**.
+   Il lit maintenant `memory.read()` et **signale la dette R6**. *Une démo qui ment est pire
+   qu'une démo absente.*
+3. Le bandeau affichait **« Kimi-K2.6 » codé en dur** — donc « Kimi » pendant que **gpt-5.4**
+   tournait. Il **lit** maintenant `AZURE_AI_INFERENCE_MODEL`.
+**La leçon commune** : *du texte qui affirme sans vérifier*. C'est le bug `sorted(dict)` de
+T003, en version interface. Et un 4ᵉ le même jour dans mes propres contrôles (un `grep` sans
+`cd` → « OK » affiché **sur une erreur**). **Un contrôle qui ne distingue pas « rien trouvé »
+de « pas pu chercher » ment.**
+Bruit de démarrage tu : `chromadb` 0.5 appelle `posthog.capture()` en positionnel, posthog
+récent n'accepte plus qu'un argument → faux message d'erreur au lancement.
+`ANONYMIZED_TELEMETRY=False` **ne ferme pas** ce chemin (vérifié — mon 1ᵉʳ correctif a échoué,
+je l'ai dit au lieu de prétendre que c'était réglé). Seul le logger
+`chromadb.telemetry.product.posthog` est tu — **jamais plus large**, sinon on masquerait une
+vraie panne de Chroma le jour venu.
+
+### 🟢 STACK COMPLÈTE DEBOUT (2026-07-16, commits `0304a6d` + `32ca5d9`) — Postgres + Chroma + HF + gpt-5.4
 Vérifié de bout en bout : bandeau `Postgres · ChromaKB · gpt-5.4 (Azure)`, question métier
 répondue depuis Postgres, FAQ répondue depuis Chroma, attaque bloquée. Démo Gradio sur
 `http://127.0.0.1:7860`. Postgres peuplé (10 clients, 14 commandes), Chroma indexe 16
@@ -442,7 +492,7 @@ Conception figée dans `docs/chantier3/T004-conception-cases.md` (4 raisons de l
 sur disque : `parents[3]` réellement présent, numéros de ligne testés en cassant un `.jsonl`
 exprès, 4 `raise` présents, 3 tests toujours rouges pour la même raison.
 
-### ✅ T004 TERMINÉ ET CONTRE-VÉRIFIÉ (2026-07-16)
+### ✅ T004 TERMINÉ ET CONTRE-VÉRIFIÉ (2026-07-16, commit `355f8e3`)
 `src/velmo/mlops/cases.py` + `suites/__init__.py` (vide). Écrit par la session VS Code sur
 l'instruction, contre-vérifié sur disque par la session principale.
 
