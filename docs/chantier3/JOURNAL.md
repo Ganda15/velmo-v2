@@ -823,6 +823,54 @@ arbitrage serait pire que la dette. **C'est une décision de conception, pas un 
 Piste si le formateur valide : comparer sur la grille du snap (entiers de 0,02) plutôt qu'en
 flottant, ou `math.isclose`. **À porter avec les 2 autres questions.**
 
+### 🔭 LANGSMITH — mesuré en vrai (2026-07-17) · **217 traces, 0 erreur** · bonus C20
+**Rien à brancher : c'était déjà connecté.** `score.py --live` → `load_dotenv()` →
+`LANGSMITH_TRACING=true` → le `@traceable(name="agent_turn")` sur `respond()` s'active → les
+traces partent. Le mode **par défaut ne charge pas `.env` → aucune trace** : la CI n'a pas à
+téléphoner à l'extérieur. **Cohérent par construction.**
+```
+projet 'velmo' (eu.api.smith.langchain.com) : 217 traces · 0 erreur
+  2026-07-17 10:33 -> 108 traces     <- le score.py --live
+  2026-07-17 09:58 ->  44 · 09:57 -> 28 · 09:40 -> 16
+```
+#### 🎯 LE CHIFFRE QUI COMPTE — un facteur 500, et les deux ont raison
+| source | latence | ce qu'elle mesure |
+|---|---|---|
+| **LangSmith** | **1,071 s** | les tours en `--live` : l'agent **attend gpt-5.4** |
+| **`mlops/report.md`** | **2,08 ms** | les tours hors-ligne : **EchoLLM** est instantané, et **159 appels sur 186 sont du regex** |
+**Aucun des deux ne ment — ils ne mesurent pas la même chose.** C'est la confirmation par
+l'extérieur de ce qu'on avait trouvé en corrigeant le coût : *la latence hors-ligne ne dit rien
+du coût réel d'un tour d'agent*. **Les deux ensemble racontent l'histoire complète**, et c'est
+exactement l'objet d'un dispositif de surveillance (C20).
+#### 🔬 LA DISTRIBUTION EST BIMODALE — la moyenne ne décrit personne
+```
+mediane :  0.895s   <- le client typique
+p95     :  3.276s   <- 1 client sur 20 attend au moins ca
+max     :  4.299s   <- le pire cas reel
+moyenne :  1.071s   <- ne decrit AUCUN client
+```
+**Ce n'est pas une courbe en cloche, ce sont DEUX POPULATIONS :**
+```
+tours LENTS   4.30s « Ma taille est L »   4.28s « Comment renvoyer un maillot ? »   -> le LLM
+tours RAPIDES 0.00s « Quelle garantie d'authenticite ? »  0.00s « Oublie mon numero » -> outils/FAQ
+```
+**Argument d'oral majeur** : *« ma moyenne dit 1 seconde. Aucun de mes clients n'attend 1
+seconde : soit c'est instantané parce qu'un outil répond, soit c'est 4 secondes parce que le
+modèle réfléchit. La moyenne est une fiction entre deux mondes — c'est le p95 qui décrit
+l'expérience réelle, et il dit 3,3 s. »* C'est **la même famille** que le « zéro inventé » : un
+chiffre techniquement exact qui **raconte une histoire fausse**.
+#### Ce qu'on peut montrer
+```
+nom    : agent_turn
+entree : {'message': 'Faites-vous du reassort sur les maillots ?', 'user_id': 'C-marc-dubois'}
+sortie : "D'apres notre FAQ (reassort.md) : # Reassort et drops..."
+```
+**0 erreur sur 217 traces** — l'agent n'a jamais planté.
+⚠️ **HORS CONTRAT du brief** — bonus C20 d'Era. **À mentionner comme un plus, jamais à
+présenter comme un livrable demandé.**
+⚠️ Piège API rencontré : `list_runs(limit=500)` → `400 Bad Request, limit exceeds maximum
+allowed value of 100`. Paginer avec `itertools.islice(c.list_runs(...), N)`.
+
 ### ✅ T014 — CLI `score.py` : la note devient un CODE DE SORTIE (2026-07-17, `9aacf60`)
 **Une CI ne sait pas lire « 0.825 ». Elle sait lire 0 ou 1.** `score.py` est le **traducteur**
 entre le Python et GitHub Actions. Dernier maillon avant que la note ait le pouvoir de refuser.
