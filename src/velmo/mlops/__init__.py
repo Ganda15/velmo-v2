@@ -45,7 +45,10 @@ def run_eval(agent: Evaluable) -> Scores:
 
 def enforce_threshold(scores: Scores, min_score: float) -> None:
     """Bloque la livraison (lève `DeliveryBlocked`) si la note globale est trop basse."""
-    raise NotImplementedError("enforce_threshold")
+    if scores.global_ < min_score:
+        raise DeliveryBlocked(
+            f"note globale {scores.global_:.3f} < seuil {min_score:.3f} — livraison bloquee"
+        )
 
 
 def write_report(scores: Scores, path: Path) -> None:
