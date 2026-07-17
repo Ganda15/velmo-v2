@@ -619,7 +619,8 @@ oublié… (1 information supprimée) » → mémoire vide. Avant : « Je n'ai r
 
 ## ⏭️ À FAIRE
 
-### Étape 5 — Les 3 suites d'évaluation (TDD, Era code) ← ON EST ICI
+### Étape 5 — Les 3 suites d'évaluation ✅ TERMINÉE (19 passed, 0 failed)
+### Étape 6 — CI quality.yml + score.py ← ON EST ICI
 `specs/001-quality-eval-loop/tasks.md`, phases 1 à 5 (T001–T013). Era code elle-même,
 Claude donne code + explication dans le chat, application seulement sur « do it ».
 
@@ -664,7 +665,10 @@ Claude donne code + explication dans le chat, application seulement sur « do it
 - ✅ **T012 (`report.py`) — FAIT (2026-07-17, `ff76f1e`)**. Dette du « zéro inventé » PAYÉE.
   ⚠️ **Trouvé en le lisant des yeux** : le rapport du dégradé affiche 0.000 sans dire pourquoi
   (le `serious_leak` n'est pas dans `Scores`). Détail dans la section FAIT.
-- ⏭️ **T013 (câbler `write_report`) — LA DERNIÈRE TÂCHE avant le tout-vert.**
+- ✅ **T013 (`write_report`) — FAIT. 🟢 LES 3 TESTS SONT VERTS : 19 passed, 0 failed**
+  (2026-07-17, `b9ba635`). FR-012 prouvé par écrasement réel. Détail section FAIT.
+- ⏭️ **RESTE** : T011 (`build_eval_agent`) · T014 (`score.py`, CLI) · T015 (gate `quality.yml`)
+  · T016→T018 (preuves finales). Plus les dettes ouvertes ci-dessous.
 - ✅ **T010 (`enforce_threshold`) — FAIT, 2ᵉ test VERT (2026-07-17, `5c993d6`)**. `<` strict :
   pile au seuil, ça passe. ⚠️ **Dette : le piège flottant** (32 combos/75 bloquées à tort).
 - ✅ **T009 (câblage) — FAIT, 1er test VERT (2026-07-17, `ba96c83`)**. Détail dans la section FAIT.
@@ -764,6 +768,32 @@ inexplicable : *« ma note affiche 0,8, mon seuil est 0,8, et ça bloque »*.
 arbitrage serait pire que la dette. **C'est une décision de conception, pas un détail de code.**
 Piste si le formateur valide : comparer sur la grille du snap (entiers de 0,02) plutôt qu'en
 flottant, ou `math.isclose`. **À porter avec les 2 autres questions.**
+
+### 🟢🟢🟢 T013 — LES 3 TESTS SONT VERTS · **19 passed, 0 failed** (2026-07-17, `b9ba635`)
+```
+test_scores_produced_and_versioned  -> VERT
+test_regression_blocks_delivery     -> VERT
+test_report_contains_signals        -> VERT
+suite complète : 19 passed, 0 failed     (parti de « 3 failed, 16 passed » ce matin)
+```
+**Le bloc T001→T013 est terminé.** `write_report` = 3 lignes : `mkdir` + `write_text(render(...))`.
+`render()` (T012) fabrique le texte, `write_report` l'écrit — **deux responsabilités, deux
+fonctions**. C'est pourquoi le plan les a séparées : une fonction qui calcule **et** touche au
+disque est intestable sans créer de fichiers.
+**Les 3 règles, PROUVÉES et pas supposées :**
+1. **FR-012 — écrasement TOTAL.** Testé : rapport écrit à **0.825**, réécrit à **0.000** → le
+   0.825 **ne survit pas**. Une fusion garderait le « faux positifs : 0.000 » d'hier sur une
+   version qui n'existe plus : **une bonne nouvelle périmée**. Même famille que le « zéro
+   inventé » de T012 — mais ici le mensonge vient du **TEMPS**, pas du tarif.
+2. **`mkdir(parents=True, exist_ok=True)`** — inutile pour le test (`tmp_path` existe),
+   indispensable sur un runner CI fraîchement cloné. Testé sur un chemin profond inexistant :
+   pas de `FileNotFoundError`. Sans lui, **la CI planterait en écrivant le rapport censé
+   expliquer sa panne.**
+3. **`encoding="utf-8"` des deux côtés** — Windows écrit en `cp1252` par défaut, le tiret
+   cadratin du message de coût casserait. Testé : le `—` est intact à la relecture. *(C'est
+   exactement ce qui a fait planter mes propres scripts ce soir.)*
+Import différé de `report` dans la fonction (cycle `__init__ → report → __init__`). ruff propre
+sur tout `src/velmo`.
 
 ### ✅ T012 — rendu du rapport (2026-07-17, commit `ff76f1e`) · dette du zéro inventé PAYÉE
 `report.py` : `render(scores) -> str`. **NE fait PAS passer le test** — c'est T013 qui câble
