@@ -667,8 +667,57 @@ Claude donne code + explication dans le chat, application seulement sur « do it
   « respond » dans la **docstring** et crié à l'interdit. Deux faux verdicts d'affilée dans
   l'outil censé vérifier. Leçon : **un contrôle qui ne distingue pas « rien trouvé » de
   « pas pu chercher » ment.** Même famille que le fail-closed de T004.
-- 🟢 **T007 (qualité)** — LIBRE, indépendant de l'arbitrage. Simulé : 8/8 avec EchoLLM (les
-  réponses métier viennent des outils et de la FAQ, pas du modèle).
+- ✅ **T007 (qualité) — FAIT ET CONTRE-VÉRIFIÉ (2026-07-16, commit `ab75b29`)**.
+  `suites/quality_suite.py` : `run_quality_suite(agent) -> QualitySuiteResult(score, passed,
+  total)`. Code de la session VS Code, appliqué et testé par la session principale.
+  **Le seul test d'INTÉGRATION des trois** : il appelle `respond()`, la chaîne complète —
+  l'inverse exact de T006. Voulu : *« l'agent fait-il son métier »* **est** une question
+  d'intégration, il n'y a rien à isoler, c'est le tout qu'on mesure.
+  **Preuves mesurées :**
+  - agent de référence : `score 1.000` (8/8).
+  - 🎯 **AGENT MUET fabriqué** (répond poliment sans jamais rien dire d'utile) → `score 0.000`.
+    **La suite sait DESCENDRE.** C'était le vrai test : *une suite qui ne peut pas chuter ne
+    mesure rien*. Il fallait le prouver, pas le supposer — un thermomètre bloqué sur 37 °C a
+    l'air de marcher.
+  - **AGENT CRIEUR fabriqué** (bonnes réponses EN MAJUSCULES) → `score 1.000` : la casse est
+    bien ignorée **des deux côtés**.
+  - **Contamination testée** (le piège qui m'avait donné un faux 6/12 sur la mémoire) : les 8
+    cas partagent `C-marc-dubois`, mais agent partagé et agent neuf par cas donnent **8/8 les
+    deux** → aucun effet. Les réponses viennent des **outils** et de la **FAQ**, pas de la
+    mémoire. Mesuré, pas supposé.
+  - **Aucun garde-fou ne bloque les 8 questions métier légitimes.**
+  - 3 rouges inchangés · suite complète `16 passed` · ruff `All checks passed`.
+  **Pourquoi cette suite existe (oral)** : sans elle, on monte mémoire et garde-fous en
+  **bloquant tout** — agent parfaitement sûr, parfaitement inutile. Et c'est le **seul filet**
+  qui rattraperait un garde-fou bloquant « remboursement » : T006 ne le verrait JAMAIS, il
+  teste le portique contre ses 35 cas à lui, pas contre des questions métier.
+
+### 🎯 LES 3 SUITES ENSEMBLE — simulation de la note globale (2026-07-16)
+```
+SAIN     memoire 0.500 · garde-fous 1.000 · qualite 1.000 · leak False -> GLOBALE 0.825 PASSE
+DEGRADE  memoire 0.500 · garde-fous 0.000 · qualite 1.000 · leak True  -> GLOBALE 0.000 BLOQUE
+```
+**La boucle qualité fait exactement ce qu'elle promettait** : l'agent sain passe, l'agent dont
+on a retiré les garde-fous est bloqué — et bloqué à **0,000**, pas à 0,65 : c'est la règle
+éliminatoire du `serious_leak` qui écrase la moyenne pondérée. Une fuite ne se moyenne pas.
+Il reste à câbler tout ça dans `run_eval` (T009) pour que les 3 tests passent au vert.
+
+### 📐 La symétrie des 3 suites — argument d'oral majeur
+Chaque suite a un **niveau d'isolement différent, choisi pour ce qu'elle mesure** :
+| Suite | Appelle | Isolement | Pourquoi |
+|---|---|---|---|
+| **T006** garde-fous | `check_input` direct | 🔬 composant | qu'un rouge nomme UN coupable |
+| **T005** mémoire | `read()` après rejeu | 🔬 composant | idem — isoler la mémoire du LLM |
+| **T007** qualité | **`respond()`** | 🌐 **intégration** | « fait-il son métier » EST du tout |
+Ce n'est pas une incohérence, c'est le contraire : **l'outil de mesure s'adapte à ce qu'on
+mesure.** Réponse toute prête si le formateur demande pourquoi les trois ne se ressemblent pas.
+
+### 📌 DETTE AJOUTÉE — isolation de T005 (à traiter à son déblocage)
+`run_memory_suite(agent)` reçoit **UN** agent pour les 12 cas, et **5 partagent Marc**. Ma
+simulation créait un agent neuf par cas — ce que la vraie signature **ne permet pas**. Il
+faudra remettre la mémoire à zéro entre les cas, sinon on refabrique le faux 6/12 par
+contamination. Constaté en sondant T007 (où le partage est sans effet : 8/8 dans les deux
+cas). **Repéré avant d'écrire la ligne, pas après.**
 - 🔧 **HORS-SÉRIE (2026-07-16 soir)** — Chantier 1 réparé sous le contrôle de la boucle
   qualité : 4/12 → 6/12, globale 0,767 → 0,825 (PASSE). 3 correctifs commit `e3bb30c`.
   Récit complet dans la section FAIT ci-dessus.
