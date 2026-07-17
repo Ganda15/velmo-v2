@@ -661,6 +661,7 @@ Claude donne code + explication dans le chat, application seulement sur « do it
     le droit à l'oubli cassé**. C'est bien R5 qu'elle mesure, pas autre chose.
   - 3 rouges inchangés · suite complète `16 passed` · ruff `All checks passed`.
 
+- ✅ **T009 (câblage) — FAIT, 1er test VERT (2026-07-17, `ba96c83`)**. Détail dans la section FAIT.
 - ✅ **T008 (agrégation) — FAIT ET CONTRE-VÉRIFIÉ (2026-07-17, commit `b846c68`)**.
   `scoring.py` : `aggregate(agent) -> dict` aux 8 champs de `Scores`. Sain → **0.825**,
   dégradé → **0.0**. Sondé AVANT de coder, comme les autres.
@@ -688,6 +689,39 @@ Claude donne code + explication dans le chat, application seulement sur « do it
   **Green check du contrat** : 2 appels dans le même process → `global_` identique (0.825).
   3 rouges inchangés · `16 passed` · ruff propre.
 
+### 🟢🟢🟢 T009 — LE PREMIER TEST PASSE AU VERT (2026-07-17, commit `ba96c83`)
+`run_eval(agent) -> Scores(**aggregate(agent))` · `current_version() -> version_id(
+_config_snapshot())`. **T009 ne calcule rien : il BRANCHE.** Tout existait déjà.
+
+**LE CRITÈRE ÉTAIT LA RAISON DU ROUGE, PAS LA COULEUR** — et c'est le point à retenir :
+```
+AVANT : 3 rouges, tous « NotImplementedError: run_eval »
+APRÈS : test_scores_produced_and_versioned  -> 🟢 PASSED
+        test_regression_blocks_delivery     -> 🔴 « NotImplementedError: enforce_threshold »
+        test_report_contains_signals        -> 🔴 « NotImplementedError: write_report »
+        suite complète : 17 passed, 2 failed   (au lieu de 16/3)
+```
+**Un rouge qui reste rouge pour la MÊME raison aurait voulu dire que rien n'a bougé.** Deux
+rouges qui **changent de raison** prouvent que `run_eval` marche et que les tests sont allés
+**plus loin** avant de buter. *Lire la raison, pas la couleur* — c'est l'inverse du réflexe.
+
+**Le piège que le plan avait anticipé** (argument d'oral) : `aggregate()` renvoie un **dict**,
+pas un `Scores`. Ce n'est pas un caprice — `Scores` vit dans `__init__.py`, donc si
+`scoring.py` l'importait : `__init__ → scoring → __init__` = **import circulaire**. En
+renvoyant un dict, la dépendance ne va que **dans un sens**. Le contrat le disait dès le
+départ : *« Returns values shaped exactly like Scores's fields — not the dataclass itself »*.
+**Le piège était vu avant qu'on tombe dedans.**
+
+**Contre-vérifié — le vert est vert pour les BONNES raisons :**
+- sain : `Scores(global_=0.825, memoire=0.5, garde-fous=1.0, qualite=1.0)`
+- dégradé : `global_=0.0` → **le plafond `serious_leak` a SURVÉCU au câblage**
+- `current_version()` **stable** sur 2 appels : `v-15c0a01673a5`
+- `enforce_threshold` et `write_report` **lèvent toujours**. Ne pas les avoir codés « tant
+  qu'on y est » est délibéré : ça aurait fait passer les tests **pour les mauvaises raisons**.
+  Hors périmètre = T010 et T012.
+- `Scores(**d)` construit sans mapping manuel (clés ≡ champs) · `Scores` est `frozen` : une
+  note produite est un **constat**, pas une variable.
+
 ### 📌 DETTE AJOUTÉE — le « zéro inventé » du coût (à traiter en T012/T013)
 `EVAL_COST_PER_CALL` **n'est pas dans le `.env`** → `cost = 186 × 0.0 = 0.0`. C'est exactement
 le piège repéré chez Velmo-3 : **un coût de 0,00 € sans aucun tarif configuré ressemble à une
@@ -705,9 +739,10 @@ DEGRADE  memoire 0.500 · garde-fous 0.000 · qualite 1.000 · leak True  -> GLO
 Ce ne sont plus des estimations : **les trois suites existent et tournent**. L'agent sain passe,
 l'agent privé de garde-fous est bloqué à **0,000** (pas 0,65) — la règle éliminatoire du
 `serious_leak` écrase la moyenne pondérée. **Une fuite ne se moyenne pas.**
-**MAJ 2026-07-17** : `scoring.py` (T008) est fait et l'agrégation confirme ces chiffres —
-sain **0.825**, dégradé **0.0**. Il ne reste que le **câblage dans `run_eval` (T009)** pour que
-les 3 tests d'acceptance passent au vert. **On y est.**
+**MAJ 2026-07-17** : `scoring.py` (T008) puis le câblage (T009) sont faits.
+**`run_eval` est branché et le 1er test est VERT** : suite complète **17 passed, 2 failed**.
+Les 2 rouges restants attendent `enforce_threshold` (T010) et `write_report` (T012) — plus
+`run_eval`. Le plafond a survécu au câblage : dégradé toujours à **0.0**.
 - ✅ **T006 (garde-fous) — FAIT ET CONTRE-VÉRIFIÉ (2026-07-16, commit `0e51ea1`)**.
   `suites/guardrail_suite.py` : `run_guardrail_suite(agent) -> GuardrailSuiteResult`.
   Code proposé par la session VS Code, appliqué et **passé au banc d'essai** par la session
