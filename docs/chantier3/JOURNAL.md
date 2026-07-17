@@ -827,6 +827,37 @@ arbitrage serait pire que la dette. **C'est une décision de conception, pas un 
 Piste si le formateur valide : comparer sur la grille du snap (entiers de 0,02) plutôt qu'en
 flottant, ou `math.isclose`. **À porter avec les 2 autres questions.**
 
+### 📘 COURS COMPLET FR + EN (2026-07-17, `acbdfaa`) + schémas re-vérifiés (`1b576cd`)
+**`docs/chantier3/COURS-chantier3-FR.md`** et **`-EN.md`** — 16 sections, du début à la fin.
+**Principe** : Era lit le code dans VS Code ; le cours donne **le fichier et la ligne**, et ne
+dit que le **POURQUOI**, le **QUOI** et **CE QU'ON A MODIFIÉ**. Aucun code recopié.
+Contenu : le problème résolu · la carte des 10 fichiers · **T003→T015 une par une** · ce qu'on a
+réparé dans le Chantier 1 · **les 8 leçons de fond** · ce qui reste ouvert · les commandes.
+⚠️ **Les 28 références de ligne sont VÉRIFIÉES par script** contre le code réel. **J'en avais 2
+fausses** (`memory/__init__.py:103` → `:118`, `agent.py:114` → `:115`) : **mes propres correctifs
+du Chantier 1 avaient décalé les lignes**. *Un cours qui envoie au mauvais endroit serait pire
+qu'aucun cours.*
+
+### 🔍 SCHÉMAS RE-VÉRIFIÉS contre le code (2026-07-17, `1b576cd`)
+Demande d'Era **avant** d'écrire le cours. Les schémas datent d'avant le code — **5 affirmations
+périmées** trouvées dans la **vue implémentation**, toutes corrigées (`.drawio` + `.png`) :
+| Le schéma disait | La réalité |
+|---|---|
+| `EvalDataError : manquant · vide · JSON invalide` | **4 raisons** — l'`id` dupliqué manquait |
+| `puis question → expected_substring` | 🔴 **FAUX** — on lit l'**état mémoire** depuis T005 |
+| `exit 0 / exit 1` | il manquait **`--live`** |
+| `décommenter le gate (ligne 30)` | **c'est fait** — le gate est ACTIF |
+| `baseline : 3 failed · 16 passed` | **19 passed, 0 failed** |
+Ajouté au passage les chiffres mesurés (23 block/12 allow · serious_leak 14/23 · notes
+0,500/1,000/1,000 · 186 appels agent vs 27 LLM · « = seuil ⇒ PASSE » · Postgres INTOUCHABLE).
+✅ **Le schéma de la BOUCLE QUALITÉ (le POURQUOI) reste juste** — les concepts n'ont pas bougé,
+seule l'implémentation a évolué. C'est la différence entre un schéma de conception et un schéma
+d'implémentation : le premier vieillit lentement, le second vieillit à chaque commit.
+⚠️ Générateur réécrit (v3) : ma chirurgie ligne par ligne sur le v2 l'avait **cassé** (des `
+`
+littéraux devenus de vrais retours à la ligne). **Réécrire proprement était plus sûr que
+rafistoler.**
+
 ### ⚡⚡⚡ T015 — LE GATE EST ACTIF · la note passe d'OPINION à POUVOIR (2026-07-17, `c6f3f5c`)
 **Le geste le plus court du chantier, et le plus important.** Jusqu'à cette ligne, la boucle
 mesurait, calculait, notait, décidait, écrivait un rapport — et **ne refusait RIEN à personne**.
