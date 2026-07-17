@@ -19,13 +19,13 @@
         <mxCell id="ds3" value="eval/quality_cases.jsonl&#10;8 cas métier" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="845" y="135" width="310" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="cases" value="cases.py — T004 (chargeur commun, FAIL-CLOSED)&#10;load_memory_cases() · load_guardrail_cases() · load_quality_cases()&#10;EvalDataError si : fichier manquant · fichier vide · ligne JSON invalide" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1" vertex="1" parent="1">
+        <mxCell id="cases" value="cases.py — T004 (chargeur commun, FAIL-CLOSED)&#10;load_memory_cases() · load_guardrail_cases() · load_quality_cases()&#10;EvalDataError si : manquant · vide · JSON invalide · id duplique" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1" vertex="1" parent="1">
           <mxGeometry x="275" y="265" width="690" height="100" as="geometry" />
         </mxCell>
         <mxCell id="cont2" value="ÉTAPE 2 — Trois suites, un pilier chacune" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffde7;strokeColor=#c8c47a;verticalAlign=top;fontSize=13;fontStyle=1;fontColor=#555555;" vertex="1" parent="1">
           <mxGeometry x="55" y="455" width="1130" height="280" as="geometry" />
         </mxCell>
-        <mxCell id="su1" value="suites/memory_suite.py — T005&#10;run_memory_suite(agent)&#10;rejoue les turns user via agent.respond(user_id, msg)&#10;puis question → expected_substring&#10;note = réussis / total" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="su1" value="suites/memory_suite.py — T005&#10;run_memory_suite(agent)&#10;rejoue les turns user via agent.respond(user_id, msg)&#10;puis lit l'ETAT : memory.read().facts&#10;(3 formes : recall · persistence · forget INVERSE)&#10;note = 0,500 (6/12)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="80" y="500" width="350" height="180" as="geometry" />
         </mxCell>
         <mxCell id="su2" value="suites/guardrail_suite.py — T006&#10;run_guardrail_suite(agent)&#10;check_input / check_output DIRECT&#10;(on teste le portique, pas respond)&#10;block_rate · false_positive_rate&#10;serious_leak : hate·violence·sexual·pii·secret" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
@@ -52,16 +52,16 @@
         <mxCell id="cont4" value="ÉTAPE 4 — Une seule flèche mène à la livraison : le seuil" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffde7;strokeColor=#c8c47a;verticalAlign=top;fontSize=13;fontStyle=1;fontColor=#555555;" vertex="1" parent="1">
           <mxGeometry x="55" y="1295" width="1130" height="360" as="geometry" />
         </mxCell>
-        <mxCell id="cli" value="score.py — T014 (CLI)&#10;python -m velmo.mlops.score --min-score 0.8&#10;exit 0 si note ≥ 0,8 · exit 1 sinon" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="cli" value="score.py — T014 (CLI)&#10;python -m velmo.mlops.score --min-score 0.8&#10;exit 0 si note ≥ 0,8 · exit 1 sinon&#10;--live : Postgres + Chroma + gpt-5.4 (hors CI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="150" y="1340" width="440" height="110" as="geometry" />
         </mxCell>
         <mxCell id="report" value="mlops/report.md — T012 · T013&#10;memoire · taux de blocage · faux positifs · latence · cout&#10;(mots SANS accents : le test compare de l'ASCII)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1" vertex="1" parent="1">
           <mxGeometry x="650" y="1340" width="510" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="ci" value=".github/workflows/quality.yml — T015&#10;décommenter le gate (ligne 30)&#10;→ la CI devient BLOQUANTE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1" vertex="1" parent="1">
+        <mxCell id="ci" value=".github/workflows/quality.yml — T015&#10;gate ACTIF (4 dièses retirés)&#10;→ la CI EST BLOQUANTE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1" vertex="1" parent="1">
           <mxGeometry x="150" y="1520" width="440" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="contract" value="CONTRAT — tests/acceptance/test_mlops.py (NE JAMAIS MODIFIER)&#10;test_scores_produced_and_versioned · test_regression_blocks_delivery · test_report_contains_signals&#10;baseline actuelle : 3 failed (NotImplementedError: run_eval) · 16 passed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;dashed=1;fontSize=11;fontStyle=1" vertex="1" parent="1">
+        <mxCell id="contract" value="CONTRAT — tests/acceptance/test_mlops.py (NE JAMAIS MODIFIER)&#10;test_scores_produced_and_versioned · test_regression_blocks_delivery · test_report_contains_signals&#10;etat : 19 passed, 0 failed — les 3 sont VERTS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;dashed=1;fontSize=11;fontStyle=1" vertex="1" parent="1">
           <mxGeometry x="200" y="1690" width="840" height="100" as="geometry" />
         </mxCell>
         <mxCell id="order" value="Ordre de code : T004 → T005 · T006 · T007 (parallèles) → T008 → T009 → T010 · T011 → T012 · T013 → T014 → T015" style="text;html=1;fontSize=12;fontStyle=2;align=center;" vertex="1" parent="1">
