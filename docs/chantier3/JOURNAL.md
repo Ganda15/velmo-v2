@@ -670,7 +670,9 @@ oublié… (1 information supprimée) » → mémoire vide. Avant : « Je n'ai r
 ## ⏭️ À FAIRE
 
 ### Étape 5 — Les 3 suites d'évaluation ✅ TERMINÉE (19 passed, 0 failed)
-### Étape 6 — CI quality.yml + score.py ← ON EST ICI
+### Étape 6 — CI quality.yml + score.py ✅ TERMINÉE (le gate est actif)
+### Étape 7 — mlops/report.md ✅ TERMINÉE (T012/T013)
+### Étape 8 — Preuves + push + arbitrages formateur ← ON EST ICI
 `specs/001-quality-eval-loop/tasks.md`, phases 1 à 5 (T001–T013). Era code elle-même,
 Claude donne code + explication dans le chat, application seulement sur « do it ».
 
@@ -721,8 +723,10 @@ Claude donne code + explication dans le chat, application seulement sur « do it
   (Postgres tournait, 0 connexion ouverte). Levier `--live` prouvé. Détail section FAIT.
 - ✅ **T014 (`score.py` + `--live`) — FAIT (2026-07-17, `9aacf60`)**. exit 0 / exit 1 mesurés,
   le rapport survit au blocage, `--live` branche gpt-5.4 + Postgres + Chroma en 90 s.
-- ⏭️ **RESTE : T015** — ⚡ retirer les 4 `#` de `quality.yml` : **la note passe d'opinion à
-  pouvoir**. Puis T016→T018 (preuves finales). Plus les dettes ci-dessous.
+- ⚡ **T015 — FAIT (2026-07-17, `c6f3f5c`). LE GATE EST ACTIF.** 6 étapes, « Quality gate »
+  reconnu et en dernier. **La note a le pouvoir de bloquer.** Détail section FAIT.
+- ⏭️ **RESTE** : T016/T017/T018 (preuves finales, largement faites) · **le PUSH** pour voir le
+  gate refuser une PR (niveau 3 de C13) · les dettes ci-dessous · les 3 questions formateur.
 - ✅ **T010 (`enforce_threshold`) — FAIT, 2ᵉ test VERT (2026-07-17, `5c993d6`)**. `<` strict :
   pile au seuil, ça passe. ⚠️ **Dette : le piège flottant** (32 combos/75 bloquées à tort).
 - ✅ **T009 (câblage) — FAIT, 1er test VERT (2026-07-17, `ba96c83`)**. Détail dans la section FAIT.
@@ -822,6 +826,54 @@ inexplicable : *« ma note affiche 0,8, mon seuil est 0,8, et ça bloque »*.
 arbitrage serait pire que la dette. **C'est une décision de conception, pas un détail de code.**
 Piste si le formateur valide : comparer sur la grille du snap (entiers de 0,02) plutôt qu'en
 flottant, ou `math.isclose`. **À porter avec les 2 autres questions.**
+
+### ⚡⚡⚡ T015 — LE GATE EST ACTIF · la note passe d'OPINION à POUVOIR (2026-07-17, `c6f3f5c`)
+**Le geste le plus court du chantier, et le plus important.** Jusqu'à cette ligne, la boucle
+mesurait, calculait, notait, décidait, écrivait un rapport — et **ne refusait RIEN à personne**.
+Le `exit 1` de la CLI partait **dans le vide** : aucune étape de CI ne l'écoutait. Maintenant
+GitHub Actions lit ce code de sortie, et **un commit qui fait chuter la note ne peut pas être
+fusionné**. **C'est le critère C13.**
+**VÉRIFIÉ — l'étape est RÉELLEMENT reconnue, pas juste dé-commentée :**
+```
+5 etapes AVANT  ->  6 APRES
+« Quality gate » present : True · en dernier : True
+commande : uv run python -m velmo.mlops.score --min-score 0.8
+```
+**Pourquoi vérifier au parseur et pas à l'œil** : un YAML mal indenté produit une étape que
+GitHub **ignore EN SILENCE**. Un gate qui a l'air posé et ne bloque rien serait **le pire
+résultat possible** — pire que pas de gate du tout, parce qu'on lui ferait confiance.
+🎯 **CE QUI REND CE GATE POSSIBLE** — et c'est la décision d'hier soir qui paie : l'étape
+n'exige **ni Docker, ni Postgres, ni clé Azure**. Elle appelle `score.py` **SANS `--live`** →
+`build_eval_agent()` : SQLite + LocalKB + EchoLLM, **1 s, zéro secret**. *Si la vraie stack
+avait été le défaut, cette étape ne démarrerait JAMAIS sur un runner GitHub et T015 serait
+indémontrable. Garder `--live` en option, pas en défaut, EST ce qui rend le gate réel.*
+Mesuré : gate local → `exit 0` (0.825) · sous le seuil → `exit 1` + la raison. `19 passed`.
+⚠️ **ÉCART AU CONTRAT ASSUMÉ (1 ligne)** : le contrat dit *« removing the four leading `# ` —
+no other change »*. J'ai **aussi supprimé** le commentaire `# Décommenter une fois python -m
+velmo.mlops.score disponible :`. **Raison** : laissé au-dessus de code décommenté, **il ment** —
+même famille que tout ce qu'on traque. Les 2 lignes explicatives (« Note globale bloquante… »)
+sont conservées. **À arbitrer par Era.**
+
+#### 🎯 CE QUI RESTE POUR PROUVER C13 — les 3 niveaux de preuve
+| | niveau | état |
+|---|---|---|
+| 1 | **la commande** sort en 0/1 | ✅ mesuré en local |
+| 2 | **l'étape existe** dans le workflow | ✅ prouvé au parseur (6 étapes) |
+| 3 | **le gate refuse une PR** | ❌ **exige un push GitHub** |
+Le contrat prévoit l'alternative locale (*« or run `act`/inspect the workflow syntax
+locally »*) — `act` **n'est pas installé**, et il n'apprendrait rien de plus que le niveau 2.
+**L'expérience qui vaut vraiment** (demande d'Era : pratiquer pour de vrai, pas lire) :
+```
+1. depot en PRIVE (gh repo edit --visibility private)  <- il est PUBLIC aujourd'hui
+2. push main                     -> Actions : VERT   (0,825 >= 0,8)
+3. branche « demo-regression »   -> neutraliser un garde-fou expres
+4. ouvrir une PR                 -> Actions : ROUGE  « note globale 0.000 < seuil 0.800 »
+                                    la PR ne peut pas etre mergee
+5. capture d'ecran               -> C13 DEMONTRE, pas raconte
+```
+Tout est déjà là pour le faire : `build_degraded_agent()` existe, et la note tombe à **0.000**
+(`serious_leak`) — mesuré. **Un run vert prouve que ça marche ; un run ROUGE prouve que ça
+SERT.** C'est le rouge que le jury veut voir.
 
 ### 🔭 LANGSMITH — mesuré en vrai (2026-07-17) · **217 traces, 0 erreur** · bonus C20
 **Rien à brancher : c'était déjà connecté.** `score.py --live` → `load_dotenv()` →
