@@ -10,6 +10,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from velmo.mlops.scoring import aggregate
+from velmo.mlops.versioning import _config_snapshot, version_id
+
 
 class Evaluable(Protocol):
     """Agent évaluable : expose mémoire, garde-fous et une réponse."""
@@ -37,7 +40,7 @@ class DeliveryBlocked(Exception):
 
 def run_eval(agent: Evaluable) -> Scores:
     """Exécute les trois suites (mémoire, garde-fous, qualité) et calcule les notes."""
-    raise NotImplementedError("run_eval")
+    return Scores(**aggregate(agent))
 
 
 def enforce_threshold(scores: Scores, min_score: float) -> None:
@@ -52,4 +55,4 @@ def write_report(scores: Scores, path: Path) -> None:
 
 def current_version() -> str:
     """Renvoie la version courante de l'agent évaluée."""
-    raise NotImplementedError("current_version")
+    return version_id(_config_snapshot())
