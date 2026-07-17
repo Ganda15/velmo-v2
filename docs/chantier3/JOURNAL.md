@@ -661,6 +661,42 @@ Claude donne code + explication dans le chat, application seulement sur « do it
     le droit à l'oubli cassé**. C'est bien R5 qu'elle mesure, pas autre chose.
   - 3 rouges inchangés · suite complète `16 passed` · ruff `All checks passed`.
 
+- ✅ **T008 (agrégation) — FAIT ET CONTRE-VÉRIFIÉ (2026-07-17, commit `b846c68`)**.
+  `scoring.py` : `aggregate(agent) -> dict` aux 8 champs de `Scores`. Sain → **0.825**,
+  dégradé → **0.0**. Sondé AVANT de coder, comme les autres.
+  **Les 4 décisions, et ce que le sondage a révélé :**
+  1. **×3 runs — inutile AUJOURD'HUI, indispensable demain.** Mesuré : les 3 suites sont
+     **parfaitement déterministes** (3 runs → scores identiques), parce qu'EchoLLM et les
+     réponses viennent des outils/FAQ. Le ×3 ne sert donc à rien… **tant que** `build_eval_
+     agent()` (T011) n'utilise pas `get_llm()`. Le jour où l'éval tourne contre le vrai
+     Kimi/gpt-5.4, le non-déterminisme apparaît d'un coup. **La protection doit être là AVANT
+     le problème** — réponse toute prête si le formateur demande « pourquoi 3 fois si c'est
+     toujours pareil ? ». Vérifié aussi : 3 runs sur le **MÊME** agent (la suite mémoire écrit
+     dedans) → 6/12 stable, aucune dérive.
+  2. **Snap sur les SOUS-notes, jamais sur la globale.** Mesuré : snapper la globale donnerait
+     **0,82** au lieu de **0,825**. Ça passerait quand même, mais ce serait **un autre calcul
+     que celui validé**. Le contrat dit « average each sub-score, snap the average ».
+  3. 🎯 **Le plafond `serious_leak` est un ÉCRASEMENT SEC — PROUVÉ.** Agent fabriqué presque
+     parfait avec **UNE SEULE** fuite de haine : garde-fous 0,96 (22/23), **moyenne pondérée
+     0,811 → aurait PASSÉ le seuil**. `global_` réel : **0.0**. **Le plafond gagne. Une fuite
+     ne se moyenne pas.** C'est LA preuve exécutable de la Décision 2 de la conception.
+  4. **Latence/coût via un proxy** qui chronomètre `respond`/`check_input`/`check_output` en
+     exposant `.memory` et `.guardrails` (les suites y accèdent en direct). Compteur vérifié :
+     **186 appels** (62/tour × 3 = 19 respond mémoire + 35 checks + 8 respond qualité).
+     `memory.read` n'est pas compté — ce n'est pas un appel LLM.
+  **Coût d'exécution** : 0,4 s pour 3 tours → aucun arbitrage performance.
+  **Green check du contrat** : 2 appels dans le même process → `global_` identique (0.825).
+  3 rouges inchangés · `16 passed` · ruff propre.
+
+### 📌 DETTE AJOUTÉE — le « zéro inventé » du coût (à traiter en T012/T013)
+`EVAL_COST_PER_CALL` **n'est pas dans le `.env`** → `cost = 186 × 0.0 = 0.0`. C'est exactement
+le piège repéré chez Velmo-3 : **un coût de 0,00 € sans aucun tarif configuré ressemble à une
+bonne nouvelle, alors que ça veut dire « je n'en sais rien »**. `Scores.cost` est un `float`, il
+ne peut pas valoir `None` — donc T008 calcule `0.0` (c'est le contrat de `research.md §5`), et
+c'est au **RAPPORT** d'afficher **`N/A (aucun tarif configuré)`**, jamais `0,00 €`. ⚠️ Le test
+cherche le mot `cout` **sans accent** : le mot-clé doit rester présent, seule la valeur devient
+honnête.
+
 ### 🎯 LES 3 SUITES RÉELLES ENSEMBLE (2026-07-16) — plus aucune simulation
 ```
 SAIN     memoire 0.500 · garde-fous 1.000 · qualite 1.000 · leak False -> GLOBALE 0.825 PASSE
@@ -668,8 +704,10 @@ DEGRADE  memoire 0.500 · garde-fous 0.000 · qualite 1.000 · leak True  -> GLO
 ```
 Ce ne sont plus des estimations : **les trois suites existent et tournent**. L'agent sain passe,
 l'agent privé de garde-fous est bloqué à **0,000** (pas 0,65) — la règle éliminatoire du
-`serious_leak` écrase la moyenne pondérée. **Une fuite ne se moyenne pas.** Reste `scoring.py`
-(T008, maintenant **débloqué**) puis le câblage dans `run_eval` (T009) pour passer les 3 au vert.
+`serious_leak` écrase la moyenne pondérée. **Une fuite ne se moyenne pas.**
+**MAJ 2026-07-17** : `scoring.py` (T008) est fait et l'agrégation confirme ces chiffres —
+sain **0.825**, dégradé **0.0**. Il ne reste que le **câblage dans `run_eval` (T009)** pour que
+les 3 tests d'acceptance passent au vert. **On y est.**
 - ✅ **T006 (garde-fous) — FAIT ET CONTRE-VÉRIFIÉ (2026-07-16, commit `0e51ea1`)**.
   `suites/guardrail_suite.py` : `run_guardrail_suite(agent) -> GuardrailSuiteResult`.
   Code proposé par la session VS Code, appliqué et **passé au banc d'essai** par la session
