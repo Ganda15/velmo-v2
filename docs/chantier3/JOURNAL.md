@@ -719,8 +719,10 @@ Claude donne code + explication dans le chat, application seulement sur « do it
   (2026-07-17, `b9ba635`). FR-012 prouvé par écrasement réel. Détail section FAIT.
 - ✅ **T011 (`build_eval_agent`) — FAIT (2026-07-17, `14114e5`)**. Isolation Postgres PROUVÉE
   (Postgres tournait, 0 connexion ouverte). Levier `--live` prouvé. Détail section FAIT.
-- ⏭️ **RESTE** : T014 (`score.py` + drapeau `--live`) · T015 (⚡ gate `quality.yml` : la note
-  passe d'opinion à pouvoir) · T016→T018 (preuves finales). Plus les dettes ci-dessous.
+- ✅ **T014 (`score.py` + `--live`) — FAIT (2026-07-17, `9aacf60`)**. exit 0 / exit 1 mesurés,
+  le rapport survit au blocage, `--live` branche gpt-5.4 + Postgres + Chroma en 90 s.
+- ⏭️ **RESTE : T015** — ⚡ retirer les 4 `#` de `quality.yml` : **la note passe d'opinion à
+  pouvoir**. Puis T016→T018 (preuves finales). Plus les dettes ci-dessous.
 - ✅ **T010 (`enforce_threshold`) — FAIT, 2ᵉ test VERT (2026-07-17, `5c993d6`)**. `<` strict :
   pile au seuil, ça passe. ⚠️ **Dette : le piège flottant** (32 combos/75 bloquées à tort).
 - ✅ **T009 (câblage) — FAIT, 1er test VERT (2026-07-17, `ba96c83`)**. Détail dans la section FAIT.
@@ -820,6 +822,45 @@ inexplicable : *« ma note affiche 0,8, mon seuil est 0,8, et ça bloque »*.
 arbitrage serait pire que la dette. **C'est une décision de conception, pas un détail de code.**
 Piste si le formateur valide : comparer sur la grille du snap (entiers de 0,02) plutôt qu'en
 flottant, ou `math.isclose`. **À porter avec les 2 autres questions.**
+
+### ✅ T014 — CLI `score.py` : la note devient un CODE DE SORTIE (2026-07-17, `9aacf60`)
+**Une CI ne sait pas lire « 0.825 ». Elle sait lire 0 ou 1.** `score.py` est le **traducteur**
+entre le Python et GitHub Actions. Dernier maillon avant que la note ait le pouvoir de refuser.
+**Mesuré — sans pipe qui masque le code de sortie** (mon 1ᵉʳ test capturait le `$?` de `grep`,
+pas celui de Python : *je l'ai vu et refait, au lieu de publier un faux 0*) :
+```
+--min-score 0.8   -> exit 0 · « note globale 0.825 — version v-15c0a01673a5 »
+--min-score 0.99  -> exit 1 · raison sur stderr · RAPPORT ÉCRIT QUAND MÊME
+--live            -> exit 0 · 90 s · AzureLLM (gpt-5.4) + ChromaKB + Postgres
+```
+🎯 **LE RAPPORT SURVIT AU BLOCAGE — c'est le cœur de T014.** `write_report` est appelé **AVANT**
+le `try/except`. Dans l'ordre inverse, un blocage **empêcherait le rapport d'exister** : on
+aurait un `exit 1` et **aucun document pour comprendre**. *Le rapport doit survivre à l'échec
+qu'il explique.* Vérifié : `mlops/report.md` existe après un `exit 1` et porte la note qui a
+bloqué.
+**Seul `DeliveryBlocked` est rattrapé** — vérifié, **aucun `except Exception`** dans le fichier.
+Un `EvalDataError` sur un `.jsonl` cassé **traverse**, traceback compris. *Le fail-closed de
+T004 qui remonte jusqu'à la surface : une donnée pourrie ne peut pas produire un vert* (FR-010).
+**`--live` (AJOUT hors contrat, demandé par Era pour pratiquer les outils)** :
+| | agent | stack | durée | pour |
+|---|---|---|---|---|
+| défaut | `build_eval_agent()` | SQLite · LocalKB · EchoLLM | ~1 s | **la CI** |
+| `--live` | `build_default_agent()` | Postgres · Chroma · gpt-5.4 | ~90 s | **la pratique** |
+`load_dotenv()` et l'import de `build_default_agent` sont **entièrement** dans le bloc `--live` :
+le chemin par défaut ne charge **jamais** `.env`. **Sans ça, T015 et le critère C13 seraient
+indémontrables** sur un runner sans Docker ni clé. Honnêteté : `--live` donne la **même note
+(0,825)** — il donne la **pratique** et la **démo**, pas une meilleure mesure.
+
+### 🔴 DETTE — la CI ne distingue pas « régression » de « données cassées » (mesuré)
+```
+exception non rattrapée (données cassées)  ->  exit 1
+DeliveryBlocked (agent régressé)           ->  exit 1     ← MÊME CODE
+```
+Deux mondes : l'un envoie regarder le **code**, l'autre les **données**. La CI ne peut pas le
+dire. Le contrat n'exige que « non-zéro » → **il est satisfait**, je n'ai pas dévié. Mais c'est
+**exactement** ce que l'`exit 2 INVALID` de Velmo-3 résout (`velmo3-elements-recuperes.md`,
+idée n°1). Lié à la dette n°1 de `cases.py` (une ligne JSON non-objet lève `AttributeError`, pas
+`EvalDataError` → elle échapperait au futur `except EvalDataError`). **En attente d'arbitrage.**
 
 ### ✅ T011 — `build_eval_agent()` (2026-07-17, `14114e5`) · l'agent propre à la CLI
 Jumeau de `conftest.build_reference_agent()`, avec **UNE** différence : `llm=get_llm()` au lieu
