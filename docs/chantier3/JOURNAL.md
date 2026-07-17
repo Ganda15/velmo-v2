@@ -629,6 +629,30 @@ Claude donne code + explication dans le chat, application seulement sur « do it
   le venv (Python 3.11.15, 28 paquets) sans blocage AppLocker.
 - ✅ **T002** — déjà fait par le brief : `.gitignore` couvrait `mlops/report.md` +
   `mlops/*.json`, et `mlops/.gitkeep` existait. Rien à faire (vérifié avant d'agir).
+- ✅ **T004 (2026-07-16)** — `cases.py` chargeur fail-closed, écrit par la session VS Code,
+  contre-vérifié sur disque (12 35 8, les 4 raisons lèvent, numéros de ligne exacts).
+  Détail complet dans la section FAIT ci-dessus.
+- ⏸️ **T005 (mémoire)** — EN ATTENTE DE L'ARBITRAGE FORMATEUR (2 questions : évaluer l'état
+  mémoire plutôt que la phrase ; confirmer que réparer le Chantier 1 était le bon chemin —
+  déjà fait, à faire valider). Support : `oral-blocage-T005-formateur.md`.
+- 🟢 **T006 (garde-fous) · T007 (qualité)** — LIBRES, indépendants de l'arbitrage.
+  T006 recommandé en premier (asymétrie portique direct + serious_leak).
+- 🔧 **HORS-SÉRIE (2026-07-16 soir)** — Chantier 1 réparé sous le contrôle de la boucle
+  qualité : 4/12 → 6/12, globale 0,767 → 0,825 (PASSE). 3 correctifs commit `e3bb30c`.
+  Récit complet dans la section FAIT ci-dessus.
+
+**📌 DETTES OUVERTES (rappel consolidé) :**
+1. `cases.py` : ligne JSON valide non-objet → `AttributeError` au lieu d'`EvalDataError`
+   — **à fermer avant T014** (sinon exit 2 INVALID confondu avec une régression).
+2. `cases.py` : cas sans champ `id` → message « id duplique : None » qui ment sur la cause.
+3. Mémoire : 6 tournures non captées par regex (« Je porte toujours la taille L ») —
+   travail d'un extracteur LLM ou de la couche épisodique Chroma (dette Chantier 1).
+4. `inspect()` (R6) toujours stub — la démo Gradio contourne via `memory.read()`.
+5. mypy : 67 erreurs préexistantes sur tout `src/` (dont code formateur) — pas une
+   régression, à traiter globalement ou jamais.
+6. Hors-repo : Obsidian pas synchronisé (schémas, oraux, journal) ; GitHub pas poussé
+   (~18 commits d'avance, tout vit sur ce disque).
+
 - ✅ **T003** — `src/velmo/mlops/versioning.py` : empreinte SHA-256 de la config
   (prompt + token_budget + garde-fous). Vérifié : `v-15c0a01673a5` identique sur 2 runs.
   🔴→🟢 **Incident C21 documenté — 2 bugs dans la 1re version :**
