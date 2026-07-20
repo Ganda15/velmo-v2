@@ -1,0 +1,115 @@
+<mxfile host="app.diagrams.net" modified="2026-07-16T00:00:00.000Z" agent="Claude" version="24.0.0">
+  <diagram id="implementation-c3" name="Implémentation Chantier 3">
+    <mxGraphModel dx="1400" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1580" pageHeight="1850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="CHANTIER 3 — VUE IMPLÉMENTATION&#10;fichiers réels · fonctions · ordre des tâches T004 → T015" style="text;html=1;fontSize=18;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="290" y="10" width="660" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cont1" value="ÉTAPE 1 — Les données entrent par une seule porte" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffde7;strokeColor=#c8c47a;verticalAlign=top;fontSize=13;fontStyle=1;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="55" y="95" width="1130" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="ds1" value="eval/memory_cases.jsonl&#10;12 cas (tags R1–R6)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="85" y="135" width="310" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="ds2" value="eval/guardrail_cases.jsonl&#10;35 cas (block / allow)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="465" y="135" width="310" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="ds3" value="eval/quality_cases.jsonl&#10;8 cas métier" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="845" y="135" width="310" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="cases" value="cases.py — T004 (chargeur commun, FAIL-CLOSED)&#10;load_memory_cases() · load_guardrail_cases() · load_quality_cases()&#10;EvalDataError si : manquant · vide · JSON invalide · id duplique" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="275" y="265" width="690" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="cont2" value="ÉTAPE 2 — Trois suites, un pilier chacune" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffde7;strokeColor=#c8c47a;verticalAlign=top;fontSize=13;fontStyle=1;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="55" y="455" width="1130" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="su1" value="suites/memory_suite.py — T005&#10;run_memory_suite(agent)&#10;rejoue les turns user via agent.respond(user_id, msg)&#10;puis lit l'ETAT : memory.read().facts&#10;(3 formes : recall · persistence · forget INVERSE)&#10;note = 0,500 (6/12)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="500" width="350" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="su2" value="suites/guardrail_suite.py — T006&#10;run_guardrail_suite(agent)&#10;check_input / check_output DIRECT&#10;(on teste le portique, pas respond)&#10;block_rate · false_positive_rate&#10;serious_leak : hate·violence·sexual·pii·secret" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="445" y="500" width="350" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="su3" value="suites/quality_suite.py — T007&#10;run_quality_suite(agent)&#10;agent.respond(user_id, question)&#10;→ expected_substring&#10;note = réussis / total" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="810" y="500" width="350" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="cont3" value="ÉTAPE 3 — Trois notes → une décision, attribuée à une version" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffde7;strokeColor=#c8c47a;verticalAlign=top;fontSize=13;fontStyle=1;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="55" y="795" width="1130" height="440" as="geometry" />
+        </mxCell>
+        <mxCell id="scoring" value="scoring.py — T008 · aggregate(agent)&#10;chaque suite ×3 → moyenne → snap au pas de 0,02&#10;globale = 0,35·mémoire + 0,35·garde-fous + 0,30·qualité&#10;serious_leak sur UN run ⇒ globale = 0,0 (éliminatoire)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="340" y="840" width="560" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="versioning" value="versioning.py — T003&#10;_config_snapshot() : prompt + config mémoire + config garde-fous&#10;version_id() = SHA-256 → v-xxxxxxxxxxxx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="85" y="1040" width="320" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="facade" value="mlops/__init__.py — T009 · T010 · T012&#10;run_eval(agent) → Scores (8 champs)&#10;enforce_threshold(scores, 0.8)&#10;&lt; seuil ⇒ DeliveryBlocked · = seuil ⇒ passe&#10;current_version() · write_report()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="450" y="1030" width="400" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="evalagent" value="eval_agent.py — T011&#10;build_eval_agent() : SQLite fraîche + seed + LocalKB&#10;→ éval 100 % hors-ligne, répétable" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="895" y="1040" width="320" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="cont4" value="ÉTAPE 4 — Une seule flèche mène à la livraison : le seuil" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffde7;strokeColor=#c8c47a;verticalAlign=top;fontSize=13;fontStyle=1;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="55" y="1295" width="1130" height="360" as="geometry" />
+        </mxCell>
+        <mxCell id="cli" value="score.py — T014 (CLI)&#10;python -m velmo.mlops.score --min-score 0.8&#10;exit 0 si note ≥ 0,8 · exit 1 sinon&#10;--live : Postgres + Chroma + gpt-5.4 (hors CI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="150" y="1340" width="440" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="report" value="mlops/report.md — T012 · T013&#10;memoire · taux de blocage · faux positifs · latence · cout&#10;(mots SANS accents : le test compare de l'ASCII)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="650" y="1340" width="510" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ci" value=".github/workflows/quality.yml — T015&#10;gate ACTIF (4 dièses retirés)&#10;→ la CI EST BLOQUANTE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="150" y="1520" width="440" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="contract" value="CONTRAT — tests/acceptance/test_mlops.py (NE JAMAIS MODIFIER)&#10;test_scores_produced_and_versioned · test_regression_blocks_delivery · test_report_contains_signals&#10;etat : 19 passed, 0 failed — les 3 sont VERTS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;dashed=1;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="200" y="1690" width="840" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="order" value="Ordre de code : T004 → T005 · T006 · T007 (parallèles) → T008 → T009 → T010 · T011 → T012 · T013 → T014 → T015" style="text;html=1;fontSize=12;fontStyle=2;align=center;" vertex="1" parent="1">
+          <mxGeometry x="120" y="1805" width="1000" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" value="Légende" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffde7;strokeColor=#c8c47a;verticalAlign=top;fontSize=14;fontStyle=1;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="95" width="310" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="lg1" value="Données d'évaluation (eval/*.jsonl)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="140" width="270" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="lg2" value="Modules d'évaluation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="184" width="270" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="lg3" value="Versionnage (empreinte de config)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="228" width="270" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="lg4" value="Agrégation de la note" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="272" width="270" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="lg5" value="Façade + CLI (le verdict)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="316" width="270" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="lg6" value="CI bloquante" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="360" width="270" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="lg7" value="Signaux de suivi (C20)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="404" width="270" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="lg8" value="Contrat de tests (acceptance)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;dashed=1;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="448" width="270" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;curved=1;" edge="1" parent="1" source="ds1" target="cases"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;curved=1;" edge="1" parent="1" source="ds2" target="cases"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;curved=1;" edge="1" parent="1" source="ds3" target="cases"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;curved=1;" edge="1" parent="1" source="cases" target="su1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;curved=1;" edge="1" parent="1" source="cases" target="su2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;html=1;curved=1;" edge="1" parent="1" source="cases" target="su3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;html=1;curved=1;" edge="1" parent="1" source="su1" target="scoring"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;html=1;curved=1;" edge="1" parent="1" source="su2" target="scoring"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;html=1;curved=1;" edge="1" parent="1" source="su3" target="scoring"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;html=1;curved=1;" edge="1" parent="1" source="scoring" target="facade"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e11" value="empreinte" style="edgeStyle=orthogonalEdgeStyle;html=1;curved=1;strokeColor=#82b366;fontColor=#82b366;fontStyle=1" edge="1" parent="1" source="versioning" target="facade"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e12" value="agent d'éval" style="edgeStyle=orthogonalEdgeStyle;html=1;curved=1;strokeColor=#6c8ebf;fontColor=#6c8ebf;fontStyle=1" edge="1" parent="1" source="evalagent" target="facade"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e13" style="edgeStyle=orthogonalEdgeStyle;html=1;curved=1;" edge="1" parent="1" source="facade" target="cli"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e14" value="write_report()" style="edgeStyle=orthogonalEdgeStyle;html=1;curved=1;strokeColor=#9673a6;fontColor=#9673a6;fontStyle=1" edge="1" parent="1" source="facade" target="report"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e15" value="appelé par la CI" style="edgeStyle=orthogonalEdgeStyle;html=1;curved=1;strokeColor=#b85450;fontColor=#b85450;fontStyle=1" edge="1" parent="1" source="cli" target="ci"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
