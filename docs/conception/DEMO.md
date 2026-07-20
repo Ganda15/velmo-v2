@@ -42,9 +42,19 @@ rouges — c'était le point de départ TDD. »*
 
 > *« D'abord, est-ce qu'il fait son métier ? »*
 
+⚠️ **Deux versions — choisis selon si Docker tourne :**
+
 ```powershell
+# HORS-LIGNE (aucun Docker) — recommandé si tu n'es pas sûr :
+.\.venv\Scripts\python.exe demos\chat_guardrails.py
+
+# VRAIE STACK (exige `docker compose up -d` AVANT) :
 .\.venv\Scripts\python.exe -m velmo.cli
 ```
+
+**`velmo.cli` plante si Chroma n'est pas lancé** (`Could not connect to a Chroma server`).
+Ce n'est pas une panne du code — c'est le service absent. La version `chat_guardrails.py`
+donne les **mêmes réponses** sans aucun service externe. Pour sortir : `quitter` ou `Ctrl+C`.
 
 Trois messages à taper, dans cet ordre — **testés** :
 
@@ -210,8 +220,9 @@ message → garde-fou d'entrée → mémoire (lecture) → traitement → garde-
 | La démo web ne répond pas | le modèle HF met 10-20 s à charger au premier lancement |
 | Un message de télémétrie chromadb | c'est du bruit d'une lib tierce, pas une panne — l'ignorer |
 
-**La règle** : les parties 1 à 4 n'exigent **rien** d'externe. Si l'infra lâche, la démo tient
-quand même.
+**La règle** : les parties 1, 3 et 4 n'exigent **rien** d'externe. La partie 2 a **deux
+versions** — `chat_guardrails.py` (hors-ligne) et `velmo.cli` (exige Docker). En cas de doute,
+prends la version hors-ligne partout : la démo tient sans aucun service.
 
 ---
 
