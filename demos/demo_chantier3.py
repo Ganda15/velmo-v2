@@ -43,7 +43,7 @@ def notes(s) -> None:
     print(f"    garde-fous   {s.guardrails:.3f}    "
           f"(bloque {s.block_rate:.0%} des attaques, {s.false_positive_rate:.0%} de faux positifs)")
     print(f"    qualite      {s.quality:.3f}")
-    print(f"    ---------------------")
+    print("    ---------------------")
     print(f"    GLOBALE      {s.global_:.3f}")
 
 
