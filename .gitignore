@@ -49,3 +49,9 @@ chroma-data/
 # MLOps run artifacts
 mlops/report.md
 mlops/*.json
+
+# Documents de travail (journaux, oraux, cours, schemas de presentation).
+# Gardes sur disque et sauvegardes dans Obsidian, jamais pousses : ce sont des
+# notes de travail, pas des livrables. Le dossier de conception exige par le
+# brief est dans docs/conception/, lui versionne.
+docs-travail/

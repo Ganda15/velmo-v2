@@ -1,6 +1,12 @@
-"""Suite d'evaluation memoire : verifie l'etat memoire apres reprise de la
-conversation, jamais la phrase du LLM (EchoLLM ne repond pas, il repete —
-voir docs/chantier3/oral-blocage-T005-formateur.md)."""
+"""Suite d'evaluation memoire : verifie l'ETAT memoire apres rejeu de la
+conversation, jamais la phrase produite par le LLM.
+
+Raison : l'agent d'evaluation utilise EchoLLM (conftest le code en dur), qui
+repete la question au lieu d'y repondre. Verifier la phrase donnerait 0/12 et
+bloquerait l'agent SAIN. On mesure la memoire, pas le talent du modele a
+formuler — meme raison qui fait que la suite garde-fous appelle le portique en
+direct. Ecart assume par rapport a la conception initiale.
+Voir docs/conception/03-modele-donnees-memoire.md."""
 
 from __future__ import annotations
 
