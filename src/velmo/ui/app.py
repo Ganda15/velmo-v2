@@ -120,11 +120,12 @@ def _ligne(nom: str, valeur: float, commentaire: str = "") -> str:
     return f"| {nom} | **{valeur:.3f}** | {commentaire} |"
 
 
-def run_evaluation() -> str:
+def run_evaluation(seuil: float = SEUIL) -> str:
     """Evalue l'agent sain puis le meme sans garde-fous, et rend le verdict.
 
     On evalue l'agent HORS-LIGNE (build_eval_agent), pas l'agent live affiche
     en haut : c'est celui que la CI mesure, et il tourne en une seconde.
+    Le seuil est reglable pour montrer le gate basculer en direct.
     """
     from velmo.mlops import DeliveryBlocked, current_version, enforce_threshold, run_eval
     from velmo.mlops.eval_agent import build_eval_agent
@@ -143,7 +144,7 @@ def run_evaluation() -> str:
 
     def verdict(scores) -> tuple[str, int]:
         try:
-            enforce_threshold(scores, SEUIL)
+            enforce_threshold(scores, seuil)
             return "🟢 **LIVRAISON AUTORISÉE**", 0
         except DeliveryBlocked:
             return "🔴 **LIVRAISON BLOQUÉE**", 1
@@ -164,7 +165,7 @@ def run_evaluation() -> str:
 {_ligne("mémoire", sain.memory, "6/12 — l'extraction ne capte qu'une tournure (dette connue)")}
 {_ligne("garde-fous", sain.guardrails, f"{sain.block_rate:.0%} bloqué · {sain.false_positive_rate:.0%} de faux positifs")}
 {_ligne("qualité", sain.quality, "8/8 questions métier")}
-| **GLOBALE** | **{sain.global_:.3f}** | seuil {SEUIL} |
+| **GLOBALE** | **{sain.global_:.3f}** | seuil **{seuil:.2f}** |
 
 {verdict_sain} — code de sortie `{exit_sain}` · version `{current_version()}`
 
@@ -177,7 +178,7 @@ def run_evaluation() -> str:
 {_ligne("mémoire", degrade.memory, "inchangée")}
 {_ligne("garde-fous", degrade.guardrails, "il ne bloque plus rien")}
 {_ligne("qualité", degrade.quality, "inchangée")}
-| **GLOBALE** | **{degrade.global_:.3f}** | seuil {SEUIL} |
+| **GLOBALE** | **{degrade.global_:.3f}** | seuil **{seuil:.2f}** |
 
 {verdict_degrade} — code de sortie `{exit_degrade}`
 
@@ -196,7 +197,7 @@ soit la moyenne.
 > Ça ne se moyenne pas.**
 
 En CI, `.github/workflows/quality.yml` lance
-`python -m velmo.mlops.score --min-score {SEUIL}`. Un code de sortie `1` fait échouer
+`python -m velmo.mlops.score --min-score {seuil:.2f}`. Un code de sortie `1` fait échouer
 le job : **la pull request ne peut pas être fusionnée.**
 """
 
@@ -230,9 +231,18 @@ with gr.Blocks(title="Velmo 2.0 — démo") as demo:
             "exactement comme en CI — pas sur la stack affichée en haut. C'est ce qui "
             "lui permet de tourner en une seconde, sans Docker ni clé cloud._"
         )
+        seuil = gr.Slider(
+            minimum=0.50, maximum=1.00, value=SEUIL, step=0.01,
+            label="Seuil de blocage — déplace-le et relance pour voir le gate basculer",
+        )
         eval_out = gr.Markdown()
         gr.Button("Lancer l'évaluation", variant="primary").click(
-            run_evaluation, outputs=[eval_out]
+            run_evaluation, inputs=[seuil], outputs=[eval_out]
+        )
+        gr.Markdown(
+            "_Le seuil validé est **0,80**. Monte-le au-dessus de 0,825 : l'agent "
+            "**sain** se fait bloquer à son tour — c'est l'équivalent visuel de "
+            "`--min-score 0.99` en ligne de commande._"
         )
 
 
