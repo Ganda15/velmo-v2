@@ -6,7 +6,10 @@ commandes de niveau 1 — statut et suivi, disponibilité, modification/annulati
 retours, remboursements simples, FAQ — en gardant le contexte du client dans le temps.
 
 **État : les trois chantiers sont livrés.** `19 passed, 0 failed` · note globale **0,825** ·
-le gate CI est **actif**.
+le gate CI est **configuré et vérifié en local** (il n'a pas encore tourné sur un run GitHub).
+
+Les sorties réelles de tout ceci sont dans
+[`docs/conception/PREUVE-EXECUTION.md`](docs/conception/PREUVE-EXECUTION.md).
 
 ---
 
@@ -134,7 +137,7 @@ src/velmo/
     score.py          CLI : la note devient un code de sortie
   tools/            10 outils métier
   ui/               démo web Gradio (hors contrat, pour la démo)
-docs/conception/    dossier de conception — les 4 artefacts
+docs/conception/    dossier de conception — les 4 artefacts + la preuve d'exécution
 eval/               les jeux de cas (12 mémoire · 35 garde-fous · 8 qualité)
 tests/acceptance/   le contrat : 19 tests
 mlops/report.md     les signaux de suivi
@@ -174,6 +177,10 @@ trouve pas le paquet (`pythonpath` n'est déclaré que pour pytest).
 Le dossier de conception est dans [`docs/conception/`](docs/conception/) — les quatre artefacts
 exigés par le brief : schéma d'architecture global, modèle de données de la mémoire, tableau des
 garde-fous, schéma de la boucle qualité. Chacun a été vérifié contre le code.
+
+Les **quatre livrables** du brief, eux, sont : ce dossier de conception · le code (`src/velmo/`) ·
+le rapport de suivi [`mlops/report.md`](mlops/report.md) · la
+[preuve d'exécution des tests](docs/conception/PREUVE-EXECUTION.md).
 
 ---
 

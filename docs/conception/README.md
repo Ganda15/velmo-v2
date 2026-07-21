@@ -1,6 +1,6 @@
 # Dossier de conception — Velmo 2.0
 
-**Auteur :** Era · **Dernière vérification contre le code :** 2026-07-17
+**Auteur :** Era · **Dernière vérification contre le code :** 2026-07-21
 
 > Le brief exige quatre artefacts de conception, validés par le formateur avant tout code.
 > Les voici, avec l'état d'avancement de chacun.
@@ -19,6 +19,19 @@
 **En complément** — [`schema-05-implementation.png`](schema-05-implementation.png) : la vue
 implémentation du Chantier 3 (fichiers réels, fonctions, ordre des tâches). Pas exigée par le
 brief, utile pour la revue de code.
+
+### Où ce dossier se place dans les livrables
+
+⚠️ Deux listes de quatre à ne pas confondre. Le tableau ci-dessus est le contenu du **dossier
+de conception**. Le brief demande par ailleurs **quatre livrables**, dont ce dossier n'est que
+le premier :
+
+| # | Livrable exigé | Où il est |
+|---|---|---|
+| 1 | Le dossier de conception | **ce dossier** |
+| 2 | Le code de Velmo 2.0 | `src/velmo/` — `memory/`, `guardrails/`, `mlops/` |
+| 3 | Le rapport de suivi | [`mlops/report.md`](../../mlops/report.md) |
+| 4 | La preuve d'exécution des tests d'acceptance | [`PREUVE-EXECUTION.md`](PREUVE-EXECUTION.md) |
 
 ---
 
