@@ -16,9 +16,9 @@
 | **3** | **Tableau des garde-fous** | [`02-tableau-garde-fous.md`](02-tableau-garde-fous.md) | ✅ 7 catégories, 3 messages de refus, 3 failles fermées |
 | **4** | **Schéma de la boucle qualité** | [`schema-04-boucle-qualite.png`](schema-04-boucle-qualite.png) | ✅ corrigé le 17/07 (3 erreurs trouvées) |
 
-**En complément** — [`schema-05-implementation.png`](schema-05-implementation.png) : la vue
-implémentation du Chantier 3 (fichiers réels, fonctions, ordre des tâches). Pas exigée par le
-brief, utile pour la revue de code.
+Ce dossier ne contient que ces quatre artefacts. La vue implémentation du Chantier 3 et les
+scripts de démonstration orale existent, mais hors du dépôt : ce sont des notes de travail, pas
+des livrables.
 
 ### Où ce dossier se place dans les livrables
 
