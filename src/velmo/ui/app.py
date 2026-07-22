@@ -86,17 +86,35 @@ def chat(message: str, history: list, user_id: str) -> str:
 def show_memory(user_id: str) -> str:
     """Affiche ce que l'agent a VRAIMENT retenu de ce client.
 
-    On passe par `memory.read()`, pas par `inspect()` (R6) : `inspect()` est
-    encore un stub qui renvoie `{"facts": {}, "episodic": []}` en dur. L'appeler
-    afficherait « aucun souvenir » même avec la mémoire pleine — une démo qui
-    ment est pire qu'une démo absente.
+    On passe par `inspect()` — R6, traçabilité — et non plus par `memory.read()`.
+    `inspect()` était un stub jusqu'au 2026-07-22 ; il est implémenté et testé
+    (`test_inspect_shows_what_was_remembered_and_forgotten`).
+
+    Il montre en plus les faits OUBLIÉS, par leur clé seule. C'est ce qui rend
+    le droit à l'oubli (R5) visible en démo : on prouve que la suppression a eu
+    lieu sans ressusciter la valeur supprimée.
     """
-    facts = AGENT.memory.read(user_id, "").facts
-    if not facts:
-        body = "_Aucun fait mémorisé pour ce client. Dis « Ma taille est L » dans le chat, puis reviens ici._"
+    state = AGENT.memory.inspect(user_id)
+    facts, forgotten = state["facts"], state["forgotten"]
+
+    if facts:
+        body = "**Faits retenus**\n\n" + "\n".join(
+            f"- **{key}** : {value}" for key, value in sorted(facts.items())
+        )
     else:
-        body = "\n".join(f"- **{key}** : {value}" for key, value in sorted(facts.items()))
-    return f"{body}\n\n---\n_Lu via `memory.read()`. `inspect()` (R6) est encore un stub — dette connue du Chantier 1._"
+        body = (
+            "_Aucun fait mémorisé pour ce client. Dis « Ma taille est L » dans le chat, "
+            "puis reviens ici._"
+        )
+
+    if forgotten:
+        body += "\n\n**Oubliés** (clé seule — la valeur n'est jamais réaffichée)\n\n"
+        body += "\n".join(f"- ~~{key}~~" for key in forgotten)
+
+    return (
+        f"{body}\n\n---\n_Lu via `inspect()` (R6). L'effacement est **logique** : "
+        "la trace de la suppression reste, la valeur supprimée non._"
+    )
 
 
 SEUIL = 0.8

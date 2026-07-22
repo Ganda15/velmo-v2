@@ -21,6 +21,7 @@ from sqlalchemy import (
     create_engine,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 class Base(DeclarativeBase):
@@ -174,7 +175,28 @@ def session_factory(url: str | None = None):
 
 
 def fresh_sqlite_session():
-    """Session SQLite en mémoire avec le schéma créé (tests / évaluation hors-ligne)."""
-    engine = create_engine("sqlite://", future=True)
+    """Session SQLite en mémoire avec le schéma créé (tests / évaluation hors-ligne).
+
+    `check_same_thread=False` + `StaticPool` comme dans `memory/store.py`, et pour
+    les deux mêmes raisons :
+
+    - **StaticPool** : une seule connexion partagée, donc UNE seule base en
+      mémoire. Sans lui, chaque thread ouvrirait sa propre base vide et ne
+      verrait rien du jeu de données charge par `seed()`.
+    - **check_same_thread=False** : la démo Gradio construit l'agent au
+      chargement du module (thread principal) mais sert chaque requête dans un
+      thread de travail. Le garde-fou par défaut de SQLite levait alors
+      `ProgrammingError: SQLite objects created in a thread can only be used in
+      that same thread`.
+
+    Chaque appel cree un engine neuf, donc l'isolation entre deux sessions est
+    conservee : un test ne voit pas la base d'un autre.
+    """
+    engine = create_engine(
+        "sqlite://",
+        future=True,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, expire_on_commit=False, future=True)()
