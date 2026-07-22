@@ -35,7 +35,11 @@ from velmo.agent import build_default_agent  # noqa: E402
 
 load_dotenv()
 
-USERS = ["C-marc-dubois", "C-sofia-lopez", "C-inconnu"]
+# Deux clients REELS du jeu de donnees, plus un inconnu.
+# `C-sophie-martin` (O-2024-0107, O-2024-0110) permet la demo d'isolation :
+# depuis C-marc-dubois, demander O-2024-0107 ne doit rien rendre.
+# `C-inconnu` n'existe pas volontairement — c'est le cas limite.
+USERS = ["C-marc-dubois", "C-sophie-martin", "C-inconnu"]
 
 
 def _build_agent() -> tuple[object, str]:
