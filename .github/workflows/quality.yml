@@ -5,8 +5,7 @@ on:
     branches: [main]
   pull_request:
   # Declenchement manuel : bouton « Run workflow » dans l'onglet Actions.
-  # Permet de rejouer le gate sans commiter — utile en demo, et seul moyen
-  # de forcer un run quand le depot est un fork (GitHub y bride les push).
+  # Permet de rejouer le gate a la demande, sans avoir a commiter.
   workflow_dispatch:
 
 jobs:
