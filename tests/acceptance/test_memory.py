@@ -53,3 +53,18 @@ def test_right_to_be_forgotten():
     removed = mm.forget(user, "adresse")
     assert removed >= 1
     assert "rue des Lilas" not in mm.read(user, "Mon adresse ?").render()
+
+
+def test_inspect_shows_what_was_remembered_and_forgotten():
+    # Critère R6 : traçabilité — on doit pouvoir inspecter ce qui a été retenu.
+    mm = MemoryManager()
+    mm.remember_fact("acc-audit", "pointure", "L")
+    mm.remember_fact("acc-audit", "adresse", "12 rue des Lilas")
+    mm.forget("acc-audit", "adresse")
+
+    state = mm.inspect("acc-audit")
+
+    assert state["facts"] == {"pointure": "L"}      # ce qui reste
+    assert state["forgotten"] == ["adresse"]        # la trace de l'oubli
+    assert "rue des Lilas" not in str(state)        # sans ressusciter la valeur
+    assert mm.inspect("acc-autre")["facts"] == {}   # R3 : isolation

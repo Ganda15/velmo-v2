@@ -116,5 +116,26 @@ class MemoryManager:
             return len(hits)
 
     def inspect(self, user_id: str) -> dict:
-        """Renvoie l'état mémoire d'un utilisateur (faits + souvenirs épisodiques)."""
-        return {"facts": {}, "episodic": []}
+        """Renvoie l'état mémoire d'un utilisateur — R6, traçabilité.
+
+        Les faits actifs avec leur valeur, et les CLÉS de ceux qui ont été
+        oubliés — pas leurs valeurs. C'est ici que l'effacement *logique*
+        (`deleted`) paie : on prouve qu'une suppression a eu lieu sans
+        ressusciter le contenu supprimé. Un `inspect()` qui rendrait la valeur
+        oubliée annulerait le droit à l'oubli (R5) qu'il est censé tracer.
+
+        Seule lecture du module qui regarde les lignes `deleted` — d'où
+        l'absence de filtre ici, et le tri fait en Python juste après. Le
+        filtre `user_id` reste, lui, non négociable (R3).
+        """
+        with Session() as session:
+            rows = session.scalars(
+                select(MemoryFact).where(MemoryFact.user_id == user_id)
+            ).all()
+            return {
+                "facts": {row.key: row.value for row in rows if not row.deleted},
+                "forgotten": sorted(row.key for row in rows if row.deleted),
+                # Couche épisodique déclarée dans le modèle de données, pas
+                # branchée. Vide et assumée vide — on n'invente pas.
+                "episodic": [],
+            }

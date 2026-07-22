@@ -157,6 +157,15 @@ existante, pas un cas particulier.
 | **R2** persistance inter-session | table + `StaticPool` / Postgres | `test_cross_session_persistence` ✅ |
 | **R3** isolation par client | `user_id` indexé, filtré à **chaque** lecture | `test_isolation_between_customers` ✅ |
 | **R5** droit à l'oubli | `deleted` + filtre + `forget()` | `test_right_to_be_forgotten` ✅ |
-| R4 · R6 | inspection / budget de tokens | `token_budget` présent · `inspect()` **encore un stub** |
+| **R6** traçabilité | `inspect()` : faits actifs + **clés** oubliées | `test_inspect_shows_what_was_remembered_and_forgotten` ✅ |
+| R4 | budget de fenêtre de contexte | `token_budget` **déclaré, pas appliqué** — `read()` ne le consulte pas |
 
-`tests/acceptance/test_memory.py` : **4 passed**.
+`tests/acceptance/test_memory.py` : **5 passed**.
+
+**R6 est l'endroit où l'effacement logique paie.** `inspect()` rend les **clés** des faits
+oubliés, jamais leurs valeurs : « on a supprimé quelque chose qui s'appelait *adresse* » est une
+trace d'audit, « on a supprimé *12 rue des Lilas* » serait une fuite. Un `inspect()` qui
+recracherait la valeur effacée détruirait le droit à l'oubli (R5) qu'il documente.
+
+**R4 reste la seule exigence non tenue** : `token_budget` existe comme paramètre mais `read()`
+ne s'en sert pas — tous les faits sont restitués, sans plafond. Limite identifiée, pas masquée.
