@@ -6,7 +6,9 @@ commandes de niveau 1 — statut et suivi, disponibilité, modification/annulati
 retours, remboursements simples, FAQ — en gardant le contexte du client dans le temps.
 
 **État : les trois chantiers sont livrés.** `19 passed, 0 failed` · note globale **0,825** ·
-le gate CI est **configuré et vérifié en local** (il n'a pas encore tourné sur un run GitHub).
+le gate CI est **vert sur GitHub** —
+[run 29940070255](https://github.com/Ganda15/velmo-v2/actions/runs/29940070255) : les 19 tests
+puis la note 0,825, sur un runner Ubuntu qui ne connaît rien du poste de développement.
 
 Les sorties réelles de tout ceci sont dans
 [`docs/conception/PREUVE-EXECUTION.md`](docs/conception/PREUVE-EXECUTION.md).

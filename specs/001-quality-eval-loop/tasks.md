@@ -36,11 +36,11 @@ the repository root (see research.md §4 for why these are two different directo
 
 **Purpose**: Confirm the starting state and keep generated output out of git.
 
-- [ ] T001 Run `python -m pytest tests/acceptance/test_mlops.py -v` and confirm the baseline:
+- [X] T001 Run `python -m pytest tests/acceptance/test_mlops.py -v` and confirm the baseline:
       all 3 tests fail with `NotImplementedError` (from the stubs already in
       `src/velmo/mlops/__init__.py`). No file changes — this is the "red" you'll compare
       every later task's re-run against.
-- [ ] T002 [P] Add a `mlops/` `.gitignore` entry (ignore `mlops/report.md`, keep the
+- [X] T002 [P] Add a `mlops/` `.gitignore` entry (ignore `mlops/report.md`, keep the
       directory via `mlops/.gitkeep`) so each local/CI run doesn't dirty git — generated
       artifact, not source, per research.md §4 — in `.gitignore` and `mlops/.gitkeep`
 
@@ -55,7 +55,7 @@ without being committed.
 
 **⚠️ CRITICAL**: Complete before starting any user story phase below.
 
-- [ ] T003 Implement `current_version()`'s building blocks in `src/velmo/mlops/versioning.py`:
+- [X] T003 Implement `current_version()`'s building blocks in `src/velmo/mlops/versioning.py`:
       a `_config_snapshot()` (dict of `velmo.agent.SYSTEM_PROMPT` + default `MemoryManager`
       constructor params + `GuardrailEngine.CATEGORIES`/`INPUT_KEYWORDS`) and a
       `version_id(snapshot)` helper (`json.dumps(sort_keys=True)` → SHA-256 → `f"v-{digest[:12]}"`)
@@ -78,7 +78,7 @@ report (US3) and CLI (US2) to display it.
 **Independent Test**: `run_eval(build_reference_agent())` twice; both calls return scores in
 `[0.0, 1.0]` and `current_version()` returns the same non-empty id both times.
 
-- [ ] T004 [US1] Create `src/velmo/mlops/suites/__init__.py` (empty package marker) and
+- [X] T004 [US1] Create `src/velmo/mlops/suites/__init__.py` (empty package marker) and
       `src/velmo/mlops/cases.py`: `load_memory_cases()`, `load_guardrail_cases()`,
       `load_quality_cases()` reading `eval/*.jsonl`, plus `EvalDataError` raised on a
       missing file, an empty file, or any line that fails `json.loads` (fail-closed,
@@ -87,7 +87,7 @@ report (US3) and CLI (US2) to display it.
       - Green check (manual): `python -c "from velmo.mlops.cases import load_memory_cases, load_guardrail_cases, load_quality_cases as q; print(len(load_memory_cases()), len(load_guardrail_cases()), len(q()))"`
         prints `12 35 8`.
 
-- [ ] T005 [P] [US1] Implement `run_memory_suite(agent) -> MemorySuiteResult` in
+- [X] T005 [P] [US1] Implement `run_memory_suite(agent) -> MemorySuiteResult` in
       `src/velmo/mlops/suites/memory_suite.py`: for each case from `load_memory_cases()`,
       replay every `turns[i]` where `role == "user"` through `agent.respond(user_id, content)`
       in order (building real conversation/memory state), then send `evaluation.question` and
@@ -96,7 +96,7 @@ report (US3) and CLI (US2) to display it.
       - Green check (manual): call `run_memory_suite(build_reference_agent())` from a REPL,
         inspect `.score` is in `[0.0, 1.0]`.
 
-- [ ] T006 [P] [US1] Implement `run_guardrail_suite(agent) -> GuardrailSuiteResult` in
+- [X] T006 [P] [US1] Implement `run_guardrail_suite(agent) -> GuardrailSuiteResult` in
       `src/velmo/mlops/suites/guardrail_suite.py`: for each case from
       `load_guardrail_cases()`, call `agent.guardrails.check_input(message)` (or
       `check_output` when `where == "output"`) directly — not `agent.respond(...)`
@@ -110,14 +110,14 @@ report (US3) and CLI (US2) to display it.
         `serious_leak == False`; `run_guardrail_suite(build_degraded_agent())` →
         `serious_leak == True` (its guardrails allow everything).
 
-- [ ] T007 [P] [US1] Implement `run_quality_suite(agent) -> QualitySuiteResult` in
+- [X] T007 [P] [US1] Implement `run_quality_suite(agent) -> QualitySuiteResult` in
       `src/velmo/mlops/suites/quality_suite.py`: for each case from `load_quality_cases()`,
       call `agent.respond(user_id, question)` and check
       `expected_substring.lower() in answer.lower()`. Score = passed/total.
       - Red: still all 3 red, same reason.
       - Green check (manual): `run_quality_suite(build_reference_agent()).score` in `[0.0, 1.0]`.
 
-- [ ] T008 [US1] Implement `aggregate(agent) -> Scores` in `src/velmo/mlops/scoring.py`:
+- [X] T008 [US1] Implement `aggregate(agent) -> Scores` in `src/velmo/mlops/scoring.py`:
       call each of T005/T006/T007's suite runners **3 times**, average each sub-score, snap
       the average to the nearest `0.02` (`round(mean / 0.02) * 0.02`, clamped `[0, 1]` —
       research.md §1), combine via `0.35*memory + 0.35*guardrails + 0.30*quality`, then force
@@ -131,7 +131,7 @@ report (US3) and CLI (US2) to display it.
       - Green check (manual): two calls to `aggregate(build_reference_agent())` in the same
         process produce identical `global_` (grid-snap makes the 3-run average stable).
 
-- [ ] T009 [US1] Wire `run_eval(agent)` and `current_version()` in
+- [X] T009 [US1] Wire `run_eval(agent)` and `current_version()` in
       `src/velmo/mlops/__init__.py`: `run_eval` builds a `Scores(...)` from `scoring.aggregate(agent)`
       (T008); `current_version()` returns `versioning.version_id(versioning._config_snapshot())`
       (T003). Leave `enforce_threshold` and `write_report` raising `NotImplementedError` —
@@ -155,7 +155,7 @@ exactly threshold), and a CLI exists that CI can call.
 **Independent Test**: `enforce_threshold(run_eval(build_reference_agent()), 0.8)` does not
 raise; `enforce_threshold(run_eval(build_degraded_agent()), 0.8)` raises `DeliveryBlocked`.
 
-- [ ] T010 [US2] Implement `enforce_threshold(scores, threshold)` in
+- [X] T010 [US2] Implement `enforce_threshold(scores, threshold)` in
       `src/velmo/mlops/__init__.py`: `if scores.global_ < threshold: raise DeliveryBlocked(...)`
       — strict `<` only, no tolerance band here (contracts/python-api.md — the ±0.02 anti-noise
       tolerance already happened inside `scoring.aggregate`, T008).
@@ -167,7 +167,7 @@ raise; `enforce_threshold(run_eval(build_degraded_agent()), 0.8)` raises `Delive
         `docs/chantier3/JOURNAL.md` (Étape 4b) — investigate guardrail/quality case coverage
         in T005–T007, do not weaken this task's comparison to make it pass.
 
-- [ ] T011 [P] [US2] Implement `build_eval_agent()` in `src/velmo/mlops/eval_agent.py`:
+- [X] T011 [P] [US2] Implement `build_eval_agent()` in `src/velmo/mlops/eval_agent.py`:
       `db.fresh_sqlite_session()` + `sampledata.seed(session)`, `LocalKB()`,
       `GuardrailEngine()`, `MemoryManager()`, `llm.get_llm()` (real Kimi/Azure if configured,
       `EchoLLM` fallback otherwise) — assembled into a `velmo.agent.Agent`. Do **not** import
@@ -192,7 +192,7 @@ unaccented French signal words.
 then the file's lowercased text contains `memoire`, `blocage`, `faux positif`, `latence`,
 `cout`.
 
-- [ ] T012 [P] [US3] Implement the Markdown renderer in `src/velmo/mlops/report.py`:
+- [X] T012 [P] [US3] Implement the Markdown renderer in `src/velmo/mlops/report.py`:
       `render(scores) -> str` producing a report with explicit, deliberately unaccented
       labels — `"Score memoire"`, `"Taux de blocage"`, `"Taux de faux positifs"`,
       `"Latence"`, `"Cout"` (NOT `mémoire`/`coût` — the acceptance test checks these literal
@@ -203,7 +203,7 @@ then the file's lowercased text contains `memoire`, `blocage`, `faux positif`, `
       - Green check (manual): `render(run_eval(build_reference_agent()))` — visually confirm
         all 5 unaccented words are present when you `.lower()` the string.
 
-- [ ] T013 [US3] Wire `write_report(scores, path)` in `src/velmo/mlops/__init__.py`:
+- [X] T013 [US3] Wire `write_report(scores, path)` in `src/velmo/mlops/__init__.py`:
       `path.parent.mkdir(parents=True, exist_ok=True)` then
       `path.write_text(report.render(scores), encoding="utf-8")` (full overwrite, no
       stale-data merge — FR-012).
@@ -224,7 +224,7 @@ delivers User Story 2's real-world promise ("CI blocks delivery"), but it needs 
 `write_report` (contracts/cli.md: the report must be written on every run, including blocked
 ones) so it lands after Phase 5, not inside Phase 4.
 
-- [ ] T014 [US2] Implement the CLI in `src/velmo/mlops/score.py`: `main(argv=None)` parses
+- [X] T014 [US2] Implement the CLI in `src/velmo/mlops/score.py`: `main(argv=None)` parses
       `--min-score` (default `float(os.getenv("EVAL_MIN_SCORE", "0.8"))`) and `--report`
       (default `Path("mlops/report.md")`); builds the agent via `eval_agent.build_eval_agent()`
       (T011); `scores = run_eval(agent)`; `write_report(scores, report_path)` **always**,
@@ -235,7 +235,7 @@ ones) so it lands after Phase 5, not inside Phase 4.
       - Verify: `uv run python -m velmo.mlops.score --min-score 0.8` from repo root exits
         `0`, prints a one-line summary, and `mlops/report.md` exists and is readable.
 
-- [ ] T015 [US2] Uncomment the "Quality gate" step in `.github/workflows/quality.yml`
+- [X] T015 [US2] Uncomment the "Quality gate" step in `.github/workflows/quality.yml`
       (remove the four leading `# ` on the existing commented block — no other change to that
       file) in `.github/workflows/quality.yml`
       - Verify: push/open a PR (or run `act`/inspect the workflow syntax locally) and confirm
@@ -248,11 +248,14 @@ ones) so it lands after Phase 5, not inside Phase 4.
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T016 [P] Run the full acceptance suite (not just `test_mlops.py`) to confirm no
+- [X] T016 [P] Run the full acceptance suite (not just `test_mlops.py`) to confirm no
       regression: `python -m pytest tests/acceptance/ -v`
-- [ ] T017 [P] Run the project's existing lint/type gates on the new package:
+- [X] T017 [P] Run the project's existing lint/type gates on the new package:
       `uv run ruff check src/velmo/mlops/` and `uv run mypy src/velmo/mlops/`
-- [ ] T018 Update `docs/chantier3/JOURNAL.md`: mark Étape 5 done, record the actual reference
+      — ruff: clean. mypy: **not run** (AppLocker blocks the venv on this machine, and the
+      fallback interpreter has no mypy installed). No typing figure is published. The CI
+      workflow runs neither gate: it runs pytest and the score threshold only.
+- [X] T018 Update `docs/chantier3/JOURNAL.md`: mark Étape 5 done, record the actual reference
       -agent global score observed in T010 (resolves the risk flagged at Étape 4b), and note
       whether the CI gate (T015) is green on a real push.
 
