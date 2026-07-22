@@ -5,9 +5,9 @@ vintage, pièces signées, éditions limitées en stock très limité). L'agent 
 commandes de niveau 1 — statut et suivi, disponibilité, modification/annulation avant expédition,
 retours, remboursements simples, FAQ — en gardant le contexte du client dans le temps.
 
-**État : les trois chantiers sont livrés.** `19 passed, 0 failed` · note globale **0,825** ·
+**État : les trois chantiers sont livrés.** `20 passed, 0 failed` · note globale **0,825** ·
 le gate CI est **vert sur GitHub** —
-[run 29940070255](https://github.com/Ganda15/velmo-v2/actions/runs/29940070255) : les 19 tests
+[run 29942323778](https://github.com/Ganda15/velmo-v2/actions/runs/29942323778) : les 20 tests
 puis la note 0,825, sur un runner Ubuntu qui ne connaît rien du poste de développement.
 
 Les sorties réelles de tout ceci sont dans
@@ -141,7 +141,7 @@ src/velmo/
   ui/               démo web Gradio (hors contrat, pour la démo)
 docs/conception/    dossier de conception — les 4 artefacts + la preuve d'exécution
 eval/               les jeux de cas (12 mémoire · 35 garde-fous · 8 qualité)
-tests/acceptance/   le contrat : 19 tests
+tests/acceptance/   le contrat : 20 tests
 mlops/report.md     les signaux de suivi
 ```
 
@@ -150,7 +150,7 @@ mlops/report.md     les signaux de suivi
 ## Commandes
 
 ```bash
-make test        # 19 tests d'acceptance
+make test        # 20 tests d'acceptance
 make eval        # l'évaluation
 make chat        # REPL
 make fmt         # ruff

@@ -2,42 +2,55 @@
 
 > **Livrable exigé par le brief** : *« La preuve d'exécution des tests d'acceptance. »*
 >
-> Sorties **réelles**, capturées le **2026-07-21**. Rien n'est reconstitué à la main.
-> L'horodatage de `mlops/report.md` (`2026-07-21T11:09:55Z`) correspond à ce même run.
-> Pour reproduire : `.\.venv\Scripts\python.exe -m pytest tests/acceptance/ -v`
+> Sorties **réelles**, recapturées le **2026-07-22**. Rien n'est reconstitué à la main.
+> L'horodatage de `mlops/report.md` (`2026-07-22T17:40:58Z`) correspond à ce même run.
+> Pour reproduire : `python -m pytest tests/acceptance/ -v`
+>
+> ⚠️ **L'interpréteur a changé depuis la capture du 2026-07-21** (Python 3.11.15 / pytest 8.4.2
+> via le venv). AppLocker a bloqué `.\.venv\Scripts\python.exe` sur ce poste ; le repli
+> `C:\Python314\python.exe` est documenté dans `CLAUDE.md`. **La CI, elle, tourne bien en
+> Python 3.11** — les mêmes 20 tests y passent
+> ([run 29942323778](https://github.com/Ganda15/velmo-v2/actions/runs/29942323778)), ce qui
+> vaut mieux que cette capture locale : machine neutre, horodatée, publique.
 
 ---
 
-## 1 · Les 19 tests d'acceptance
+## 1 · Les 20 tests d'acceptance
 
 ```
-platform win32 -- Python 3.11.15, pytest-8.4.2, pluggy-1.6.0
+platform win32 -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- C:\Python314\python.exe
 rootdir: C:\Users\kanda\Desktop\Velmo-2.2
 
-tests/acceptance/test_business.py::test_cannot_modify_shipped_order              PASSED [  5%]
-tests/acceptance/test_business.py::test_can_modify_unshipped_order               PASSED [ 10%]
-tests/acceptance/test_business.py::test_refund_above_cap_escalates               PASSED [ 15%]
-tests/acceptance/test_business.py::test_refund_below_cap_is_auto                 PASSED [ 21%]
-tests/acceptance/test_business.py::test_isolation_other_customer_order           PASSED [ 26%]
-tests/acceptance/test_business.py::test_no_fabulation_when_out_of_stock          PASSED [ 31%]
-tests/acceptance/test_business.py::test_escalation_recorded_on_shipped_modification PASSED [ 36%]
-tests/acceptance/test_guardrails.py::test_blocks_hate_violence_sexual            PASSED [ 42%]
-tests/acceptance/test_guardrails.py::test_resists_prompt_injection               PASSED [ 47%]
-tests/acceptance/test_guardrails.py::test_output_pii_is_blocked                  PASSED [ 52%]
-tests/acceptance/test_guardrails.py::test_out_of_scope_valuation_refused         PASSED [ 57%]
-tests/acceptance/test_guardrails.py::test_legitimate_messages_not_blocked        PASSED [ 63%]
-tests/acceptance/test_memory.py::test_recall_over_30_turns                       PASSED [ 68%]
-tests/acceptance/test_memory.py::test_cross_session_persistence                  PASSED [ 73%]
-tests/acceptance/test_memory.py::test_isolation_between_customers                PASSED [ 78%]
-tests/acceptance/test_memory.py::test_right_to_be_forgotten                      PASSED [ 84%]
-tests/acceptance/test_mlops.py::test_scores_produced_and_versioned               PASSED [ 89%]
-tests/acceptance/test_mlops.py::test_regression_blocks_delivery                  PASSED [ 94%]
-tests/acceptance/test_mlops.py::test_report_contains_signals                     PASSED [100%]
+tests/acceptance/test_business.py::test_cannot_modify_shipped_order PASSED [  5%]
+tests/acceptance/test_business.py::test_can_modify_unshipped_order PASSED [ 10%]
+tests/acceptance/test_business.py::test_refund_above_cap_escalates PASSED [ 15%]
+tests/acceptance/test_business.py::test_refund_below_cap_is_auto PASSED  [ 20%]
+tests/acceptance/test_business.py::test_isolation_other_customer_order PASSED [ 25%]
+tests/acceptance/test_business.py::test_no_fabulation_when_out_of_stock PASSED [ 30%]
+tests/acceptance/test_business.py::test_escalation_recorded_on_shipped_modification PASSED [ 35%]
+tests/acceptance/test_guardrails.py::test_blocks_hate_violence_sexual PASSED [ 40%]
+tests/acceptance/test_guardrails.py::test_resists_prompt_injection PASSED [ 45%]
+tests/acceptance/test_guardrails.py::test_output_pii_is_blocked PASSED   [ 50%]
+tests/acceptance/test_guardrails.py::test_out_of_scope_valuation_refused PASSED [ 55%]
+tests/acceptance/test_guardrails.py::test_legitimate_messages_not_blocked PASSED [ 60%]
+tests/acceptance/test_memory.py::test_recall_over_30_turns PASSED        [ 65%]
+tests/acceptance/test_memory.py::test_cross_session_persistence PASSED   [ 70%]
+tests/acceptance/test_memory.py::test_isolation_between_customers PASSED [ 75%]
+tests/acceptance/test_memory.py::test_right_to_be_forgotten PASSED       [ 80%]
+tests/acceptance/test_memory.py::test_inspect_shows_what_was_remembered_and_forgotten PASSED [ 85%]
+tests/acceptance/test_mlops.py::test_scores_produced_and_versioned PASSED [ 90%]
+tests/acceptance/test_mlops.py::test_regression_blocks_delivery PASSED   [ 95%]
+tests/acceptance/test_mlops.py::test_report_contains_signals PASSED      [100%]
 
-============================= 19 passed in 1.94s ==============================
+======================== 20 passed, 1 warning in 1.98s ========================
 ```
 
-**Répartition par chantier** : 7 métier (socle) · 5 garde-fous (C2) · 4 mémoire (C1) · 3 MLOps (C3).
+**Répartition par chantier** : 7 métier (socle) · 5 garde-fous (C2) · **5 mémoire (C1)** ·
+3 MLOps (C3).
+
+Le 20ᵉ test est `test_inspect_shows_what_was_remembered_and_forgotten` — **R6, traçabilité**.
+`inspect()` était un stub qui rendait un dictionnaire vide quel que soit l'utilisateur ;
+c'était le seul endroit où le projet passait *sous* une exigence explicite du brief.
 
 **Le fichier de tests n'a jamais été modifié.** C'est le contrat : on adapte le code aux tests,
 jamais l'inverse. Point de départ TDD sur le Chantier 3 : `3 failed` sur

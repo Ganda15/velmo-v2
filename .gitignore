@@ -17,8 +17,12 @@ htmlcov/
 dist/
 build/
 
-# uv
-uv.lock
+# uv — uv.lock est VERSIONNE, volontairement.
+# On ignore un lock file pour une bibliotheque, jamais pour une application.
+# Sans lui, `uv sync` en CI resout les plages de pyproject.toml a neuf a chaque
+# run : une dependance publiee dans la plage change l'environnement, donc
+# potentiellement la note globale, SANS que l'empreinte de version bouge. Une
+# mesure qui n'est pas reproductible ne mesure rien.
 
 # Env
 .env
