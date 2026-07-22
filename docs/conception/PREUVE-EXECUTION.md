@@ -3,22 +3,21 @@
 > **Livrable exigé par le brief** : *« La preuve d'exécution des tests d'acceptance. »*
 >
 > Sorties **réelles**, recapturées le **2026-07-22**. Rien n'est reconstitué à la main.
-> L'horodatage de `mlops/report.md` (`2026-07-22T17:40:58Z`) correspond à ce même run.
+> L'horodatage de `mlops/report.md` (`2026-07-22T18:14:29Z`) correspond à ce même run.
 > Pour reproduire : `python -m pytest tests/acceptance/ -v`
 >
-> ⚠️ **L'interpréteur a changé depuis la capture du 2026-07-21** (Python 3.11.15 / pytest 8.4.2
-> via le venv). AppLocker a bloqué `.\.venv\Scripts\python.exe` sur ce poste ; le repli
-> `C:\Python314\python.exe` est documenté dans `CLAUDE.md`. **La CI, elle, tourne bien en
-> Python 3.11** — les mêmes 20 tests y passent
-> ([run 29942323778](https://github.com/Ganda15/velmo-v2/actions/runs/29942323778)), ce qui
-> vaut mieux que cette capture locale : machine neutre, horodatée, publique.
+> **Même chaîne qu'en CI** : Python 3.11.15, la version annoncée dans le README. Les mêmes 20
+> tests passent sur un runner Ubuntu neuf —
+> [run 29945077394](https://github.com/Ganda15/velmo-v2/actions/runs/29945077394), machine
+> neutre, horodatée, publique. Depuis le 2026-07-22, `uv.lock` est versionné : la CI installe
+> les versions exactes de ce poste, elle ne les résout plus à neuf.
 
 ---
 
 ## 1 · Les 20 tests d'acceptance
 
 ```
-platform win32 -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- C:\Python314\python.exe
+platform win32 -- Python 3.11.15, pytest-8.4.2, pluggy-1.6.0
 rootdir: C:\Users\kanda\Desktop\Velmo-2.2
 
 tests/acceptance/test_business.py::test_cannot_modify_shipped_order PASSED [  5%]
@@ -42,8 +41,23 @@ tests/acceptance/test_mlops.py::test_scores_produced_and_versioned PASSED [ 90%]
 tests/acceptance/test_mlops.py::test_regression_blocks_delivery PASSED   [ 95%]
 tests/acceptance/test_mlops.py::test_report_contains_signals PASSED      [100%]
 
-======================== 20 passed, 1 warning in 1.98s ========================
+============================= 20 passed in 1.48s ==============================
 ```
+
+**Le gate dans ses deux états**, capturé au même moment :
+
+```
+$ python -m velmo.mlops.score --min-score 0.8
+note globale 0.825 — version v-15c0a01673a5
+exit=0
+
+$ python -m velmo.mlops.score --min-score 0.99
+note globale 0.825 < seuil 0.990 — livraison bloquee
+exit=1
+```
+
+Même agent, même note, **deux verdicts**. C'est le code de sortie que la CI lit — pas le
+message.
 
 **Répartition par chantier** : 7 métier (socle) · 5 garde-fous (C2) · **5 mémoire (C1)** ·
 3 MLOps (C3).
