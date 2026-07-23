@@ -17,7 +17,7 @@ Les sorties réelles de tout ceci sont dans
 
 ## Ce que fait l'agent
 
-Un message client traverse cinq étapes, dans cet ordre (`agent.py::respond`, lignes 89-104) :
+Un message client traverse cinq étapes, dans cet ordre (`agent.py::respond`, lignes 89-108) :
 
 ```
 message → garde-fou d'entrée → mémoire (lecture) → traitement → garde-fou de sortie → mémoire (écriture) → réponse

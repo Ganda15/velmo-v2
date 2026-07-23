@@ -51,7 +51,9 @@ out/
 chroma-data/
 
 # MLOps run artifacts
-mlops/report.md
+# report.md est VERSIONNE : le brief le liste comme livrable, il doit etre
+# lisible dans le rendu sans avoir a lancer le projet. Contrepartie assumee :
+# il apparait modifie apres chaque evaluation locale (l'horodatage change).
 mlops/*.json
 
 # Documents de travail (journaux, oraux, cours, schemas de presentation).
