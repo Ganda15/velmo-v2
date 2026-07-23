@@ -35,7 +35,7 @@ MUST run in dev using SQLite only — no Docker required locally").
 feature).
 
 **Target Platform**: GitHub Actions `ubuntu-latest` (CI, per `.github/workflows/quality.yml`)
-and Era's Windows dev machine (local `pytest`/AppLocker fallback per `CLAUDE.md`). No OS
+and Era's Windows dev machine (local `pytest`, with an AppLocker fallback interpreter). No OS
 -specific code needed — pure Python + stdlib + SQLite.
 
 **Project Type**: Single project — new subpackage inside the existing `src/velmo/` tree plus

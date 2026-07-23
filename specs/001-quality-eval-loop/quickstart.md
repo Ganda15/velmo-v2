@@ -1,7 +1,7 @@
 # Quickstart: Quality Evaluation Loop
 
 Validates the feature end-to-end once implemented. Run from the repo root with the venv
-activated (or the AppLocker fallback interpreter per `CLAUDE.md`).
+activated (or the AppLocker fallback interpreter on the Windows dev machine).
 
 ## Prerequisites
 

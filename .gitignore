@@ -59,3 +59,8 @@ mlops/*.json
 # notes de travail, pas des livrables. Le dossier de conception exige par le
 # brief est dans docs/conception/, lui versionne.
 docs-travail/
+
+# Outillage et config locaux
+CLAUDE.md
+.claude/
+.specify/
